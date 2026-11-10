@@ -1216,24 +1216,13 @@ document.querySelectorAll("[data-open-view]").forEach((link) => {
     window.scrollTo({ top: 0 });
   });
 });
-const demoShots = [
-  { image: "/assets/story-morning.jpg", number: "01", type: "全景 · 故事开场", caption: "平凡的日常，也藏着故事的开场。", position: "center 50%", alt: "暖粉色卧室中的猫咪短剧开场示例画面" },
-  { image: "/assets/story-home.jpg", number: "02", type: "中景 · 缓缓推进", caption: "回到家，就回到了柔软的世界。", position: "60% 58%", alt: "主人在家中陪伴两只猫咪的短剧示例画面" },
-  { image: "/assets/story-home.jpg", number: "03", type: "特写 · 猫咪视角", caption: "幸福，不过是被认真陪伴的小事。", position: "95% 65%", alt: "两只猫咪得到主人陪伴的特写示例画面" }
-];
-document.querySelectorAll("[data-demo-shot]").forEach((button) => {
+document.querySelectorAll("[data-sequence-frame]").forEach((button) => {
   button.addEventListener("click", () => {
-    const shot = demoShots[Number(button.dataset.demoShot)];
-    const image = document.querySelector("#home-demo-image");
-    image.src = shot.image;
-    image.alt = shot.alt;
-    image.style.objectPosition = shot.position;
-    image.style.transform = button.dataset.demoShot === "2" ? "scale(1.45)" : "none";
-    image.style.transformOrigin = "85% 65%";
-    document.querySelector("#home-demo-number").textContent = shot.number;
-    document.querySelector("#home-demo-type").textContent = shot.type;
-    document.querySelector("#home-demo-caption").textContent = shot.caption;
-    document.querySelectorAll("[data-demo-shot]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    document.querySelector(".sequence-art").dataset.frame = button.dataset.sequenceFrame;
+    document.querySelectorAll("[data-sequence-frame]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    const index = Number(button.dataset.sequenceFrame);
+    document.querySelector(".sequence-timecode").textContent = `00:00:0${index + 1}`;
+    document.querySelector(".sequence-track").style.setProperty("--sequence-progress", `${index * 50}%`);
   });
 });
 window.addEventListener("pagehide", saveWorkspaceState);

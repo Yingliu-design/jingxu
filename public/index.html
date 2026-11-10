@@ -53,22 +53,23 @@
                 <a class="home-secondary" href="#home-workflow">了解创作流程 ↓</a>
               </div>
             </div>
-            <div class="home-stage" aria-label="可切换镜头的分镜示例">
-              <div class="demo-window">
-                <div class="demo-top"><i></i><i></i><i></i><span>分镜示例</span></div>
-                <div class="demo-body">
-                  <div class="demo-heading"><strong>一只猫的治愈日常</strong></div>
-                  <div class="demo-scene">
-                    <img id="home-demo-image" src="/assets/story-home.jpg" alt="主人在家中陪伴两只猫咪的短剧示例画面" width="1100" height="619">
-                    <span class="demo-frame-corner" id="home-demo-number">02</span>
-                    <div class="demo-scene-label"><small id="home-demo-type">中景 · 缓缓推进</small><p id="home-demo-caption">回到家，就回到了柔软的世界。</p></div>
-                  </div>
-                  <div class="demo-shots" role="group" aria-label="选择分镜示例">
-                    <button class="demo-shot" type="button" data-demo-shot="0" aria-pressed="false"><img src="/assets/story-morning.jpg" alt="" width="260" height="146"><span>01 / 故事的开始</span></button>
-                    <button class="demo-shot" type="button" data-demo-shot="1" aria-pressed="true"><img src="/assets/story-home.jpg" alt="" width="260" height="146"><span>02 / 温柔的陪伴</span></button>
-                    <button class="demo-shot" type="button" data-demo-shot="2" aria-pressed="false"><img src="/assets/story-home.jpg" alt="" width="260" height="146"><span>03 / 小小的幸福</span></button>
-                  </div>
+            <div class="home-stage">
+              <div class="sequence-art" data-frame="1" role="img" aria-label="三枚错位的电影画框，在时间轴上排列成镜头序列">
+                <div class="sequence-orbit" aria-hidden="true"></div>
+                <div class="sequence-axis" aria-hidden="true"></div>
+                <div class="sequence-sheet sequence-sheet-back" aria-hidden="true"><span class="sequence-sheet-number">01</span></div>
+                <div class="sequence-sheet sequence-sheet-middle" aria-hidden="true"><span class="sequence-sheet-number">02</span><span class="sequence-guide-horizontal"></span><span class="sequence-guide-vertical"></span></div>
+                <div class="sequence-sheet sequence-sheet-front" aria-hidden="true">
+                  <span class="sequence-sheet-number">03</span>
+                  <svg class="sequence-lens" viewBox="0 0 240 180" fill="none"><circle cx="120" cy="90" r="61" stroke="#c5e58a" stroke-opacity=".28"/><circle cx="120" cy="90" r="43" stroke="#c5e58a" stroke-opacity=".5"/><path d="m111 72 30 18-30 18V72Z" fill="#eaf1d5" stroke="#eaf1d5" stroke-width="3" stroke-linejoin="round"/><path d="M22 43V22h21M197 22h21v21M218 137v21h-21M43 158H22v-21" stroke="#c5e58a" stroke-opacity=".65" stroke-width="1.4"/></svg>
+                  <span class="sequence-timecode">00:00:02</span>
                 </div>
+                <svg class="sequence-spark" viewBox="0 0 80 80" aria-hidden="true"><path d="m40 0 7.5 24.5L69 11 55.5 32.5 80 40 55.5 47.5 69 69 47.5 55.5 40 80 32.5 55.5 11 69 24.5 47.5 0 40 24.5 32.5 11 11 32.5 24.5Z" fill="#c5e58a"/></svg>
+              </div>
+              <div class="sequence-timeline" role="group" aria-label="切换镜头序列">
+                <span class="sequence-timeline-mark" aria-hidden="true">+</span>
+                <div class="sequence-track"><i aria-hidden="true"></i><button type="button" data-sequence-frame="0" aria-pressed="false" aria-label="切换至第一帧">01</button><button type="button" data-sequence-frame="1" aria-pressed="true" aria-label="切换至第二帧">02</button><button type="button" data-sequence-frame="2" aria-pressed="false" aria-label="切换至第三帧">03</button></div>
+                <span class="sequence-timeline-mark" aria-hidden="true">+</span>
               </div>
             </div>
           </section>
