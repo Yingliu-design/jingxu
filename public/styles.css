@@ -1049,6 +1049,16 @@ textarea:focus-visible, input:focus-visible, select:focus-visible, summary:focus
   }
 
   .results > .section-heading h2 { font-size: clamp(1.45rem, 1.8vw, 1.8rem); }
+  .results > .section-heading::before {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 100%;
+    left: 0;
+    height: 2rem;
+    background: var(--surface);
+    pointer-events: none;
+  }
   .results .empty-state { min-height: calc(100% - 5rem); }
   .results .result-summary {
     margin-bottom: var(--space-lg);

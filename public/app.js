@@ -116,6 +116,7 @@ let restoredTextModelApplied = false;
 const workspaceStorageKey = "storyboard-studio.workspace.v1";
 const workspaceDbName = "storyboard-studio";
 const workspaceDbStore = "workspace";
+const resultResetVersion = 1;
 
 function openWorkspaceDb() {
   return new Promise((resolve, reject) => {
@@ -170,9 +171,24 @@ async function readWorkspaceState() {
     localState = null;
   }
   const dbState = await readWorkspaceDbState();
-  if (!localState) return dbState;
-  if (!dbState) return localState;
-  return Number(dbState.savedAt || 0) > Number(localState.savedAt || 0) ? dbState : localState;
+  const latest = !localState ? dbState : !dbState ? localState : Number(dbState.savedAt || 0) > Number(localState.savedAt || 0) ? dbState : localState;
+  if (!latest || latest.resultResetVersion === resultResetVersion) return latest;
+  // One-time cleanup requested for the existing workspace. New results continue to persist.
+  const cleared = {
+    ...latest,
+    resultResetVersion,
+    savedAt: Date.now(),
+    story: { ...latest.story, status: "", result: null },
+    text: {
+      ...latest.text,
+      output: "", outputMeta: "", originalOutput: "", originalMeta: "",
+      replicaOutput: "", replicaMeta: "", remixOutput: "", remixMeta: "",
+      storyVersion: "original", castMode: null, selectedView: "replica", taskResult: null
+    }
+  };
+  try { localStorage.setItem(workspaceStorageKey, JSON.stringify(cleared)); } catch {}
+  await writeWorkspaceDbState(cleared);
+  return cleared;
 }
 
 const restoredWorkspaceState = await readWorkspaceState();
@@ -301,6 +317,7 @@ function saveWorkspaceState() {
   const selectedTextView = elements.textResultTabButtons.find((button) => button.getAttribute("aria-selected") === "true")?.dataset.resultView || "replica";
   const state = {
     version: 1,
+    resultResetVersion,
     savedAt: Date.now(),
     story: {
       script: elements.script.value,
