@@ -25,6 +25,11 @@ const elements = {
   storyStatus: document.querySelector("#story-status"),
   empty: document.querySelector("#empty-state"),
   loading: document.querySelector("#loading-state"),
+  storyGenerationPhase: document.querySelector("#story-generation-phase"),
+  storyGenerationPercent: document.querySelector("#story-generation-percent"),
+  storyGenerationProgressbar: document.querySelector("#story-generation-progressbar"),
+  storyGenerationProgressFill: document.querySelector("#story-generation-progress-fill"),
+  storyGenerationProgressDetail: document.querySelector("#story-generation-progress-detail"),
   summary: document.querySelector("#result-summary"),
   storyboardResult: document.querySelector("#storyboard-result"),
   storyboardOutput: document.querySelector("#storyboard-output"),
@@ -97,6 +102,9 @@ let storyboardRequestController = null;
 let toastTimer;
 let textGenerationProgressTimer;
 let textGenerationStartedAt = 0;
+let storyboardProgressTimer;
+let storyboardProgressStartedAt = 0;
+let storyboardExpectedSeconds = 60;
 let providerStatus = {};
 let modelRequestId = 0;
 let promptLibrary = [];
@@ -486,6 +494,40 @@ async function openVideoDownloadsFolder() {
   }
 }
 
+function stopStoryboardProgress() {
+  clearInterval(storyboardProgressTimer);
+  storyboardProgressTimer = undefined;
+}
+
+function updateStoryboardProgress(value, phase) {
+  const percent = Math.max(0, Math.min(100, Math.round(value)));
+  const elapsed = Math.max(0, Math.floor((performance.now() - storyboardProgressStartedAt) / 1000));
+  const upper = Math.ceil(storyboardExpectedSeconds * 2);
+  elements.storyGenerationPhase.textContent = phase;
+  elements.storyGenerationPercent.textContent = percent === 100 ? "100%" : `预计 ${percent}%`;
+  elements.storyGenerationProgressbar.setAttribute("aria-valuenow", String(percent));
+  elements.storyGenerationProgressFill.style.transform = `scaleX(${percent / 100})`;
+  elements.storyGenerationProgressDetail.textContent = percent === 100
+    ? `生成完成，共用时 ${elapsed} 秒。`
+    : elapsed > upper
+      ? `已等待 ${elapsed} 秒，模型响应较慢，完成后会自动显示结果。`
+      : `已等待 ${elapsed} 秒 · 参考用时 ${Math.floor(storyboardExpectedSeconds / 2)}–${upper} 秒（估算）`;
+}
+
+function startStoryboardProgress(isPreview) {
+  stopStoryboardProgress();
+  storyboardProgressStartedAt = performance.now();
+  const shots = extractShotCount(elements.script.value) || Math.max(1, Math.round(Number(elements.durationSeconds.value) / 2));
+  storyboardExpectedSeconds = isPreview ? 4 : Math.max(30, shots * 2);
+  const phase = isPreview ? "正在整理已有分镜" : "正在生成分镜与任务";
+  updateStoryboardProgress(4, phase);
+  storyboardProgressTimer = setInterval(() => {
+    const elapsed = (performance.now() - storyboardProgressStartedAt) / 1000;
+    const estimated = Math.min(94, 4 + 90 * (1 - Math.exp(-elapsed / storyboardExpectedSeconds)));
+    updateStoryboardProgress(estimated, elapsed > storyboardExpectedSeconds * 2 ? "任务仍在处理，请稍候" : phase);
+  }, 500);
+}
+
 function setLoading(loading, isPreview = false) {
   elements.generate.disabled = loading;
   elements.preview.disabled = loading;
@@ -495,11 +537,8 @@ function setLoading(loading, isPreview = false) {
   elements.storyboardResult.hidden = loading || !currentStoryboard;
   elements.resultActions.hidden = loading || !currentTasks.length;
   elements.summary.hidden = loading || !currentTasks.length;
-  if (loading) {
-    elements.loading.querySelector("p").textContent = isPreview
-      ? "正在按镜号检查任务范围。"
-      : "正在逐镜核对画面与台词，通常需要几十秒。";
-  }
+  if (loading) startStoryboardProgress(isPreview);
+  else stopStoryboardProgress();
 }
 
 function setStoryLoading(loading) {
@@ -660,6 +699,9 @@ async function requestTasks(path) {
     if (requestId !== storyboardRequestId || inputSignature !== storyboardInputSignature()) return false;
     if (!response.ok) throw new Error(data.error || "生成失败，请稍后重试。");
     renderResult(data, inputSignature);
+    stopStoryboardProgress();
+    updateStoryboardProgress(100, "生成完成");
+    await new Promise((resolve) => setTimeout(resolve, 320));
     return true;
   } catch (error) {
     if (requestId !== storyboardRequestId || error.name === "AbortError") return false;

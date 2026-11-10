@@ -770,7 +770,8 @@ textarea:focus-visible, input:focus-visible, select:focus-visible, summary:focus
   transform-origin: left center;
   transition: transform 500ms var(--ease-out);
 }
-.loading-state #text-generation-progress-detail {
+.loading-state #text-generation-progress-detail,
+.loading-state #story-generation-progress-detail {
   margin: var(--space-md) 0 0;
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 0.8125rem;

@@ -54,39 +54,24 @@
               </div>
             </div>
             <div class="home-stage">
-              <div class="sequence-art" data-frame="1" role="img" aria-label="由圆形、镜头光圈与播放符号组成的三格胶片">
-                <svg class="sequence-composition" viewBox="0 0 620 490" fill="none" aria-hidden="true">
-                  <defs><pattern id="sequence-perforations" width="26" height="20" patternUnits="userSpaceOnUse"><rect x="7" y="7" width="11" height="6" rx="1" fill="#26352b"/></pattern></defs>
-                  <path d="M76 122C82 30 408 28 507 102C617 185 560 430 385 437C213 444 135 388 121 335" stroke="#d0d7c7" stroke-width="1.2"/>
-                  <path d="M76 122V96M63 109h26M467 413v26M454 426h26" stroke="#788773" stroke-width="1"/>
-                  <circle cx="491" cy="103" r="47" fill="#c5e58a"/>
-                  <path d="M460 103h62M491 72v62" stroke="#344a2e" stroke-width="1.2"/>
-                  <circle cx="491" cy="103" r="59" stroke="#9cab8e" stroke-dasharray="2 7"/>
-                  <g class="sequence-ribbon">
-                    <rect x="18" y="150" width="584" height="218" rx="4" fill="#fffefa" stroke="#26352b" stroke-width="1.3"/>
-                    <path d="M18 175h584M18 343h584" stroke="#26352b" stroke-width="1"/>
-                    <rect x="24" y="153" width="572" height="20" fill="url(#sequence-perforations)"/>
-                    <rect x="24" y="346" width="572" height="18" fill="url(#sequence-perforations)"/>
-                    <rect class="sequence-cell sequence-cell-one" x="29" y="186" width="177" height="146" rx="2" fill="#fffefa" stroke="#cbd1c3"/>
-                    <rect class="sequence-cell sequence-cell-two" x="221" y="186" width="177" height="146" rx="2" fill="#fffefa" stroke="#cbd1c3"/>
-                    <rect class="sequence-cell sequence-cell-three" x="413" y="186" width="177" height="146" rx="2" fill="#fffefa" stroke="#cbd1c3"/>
-                    <circle cx="117" cy="253" r="39" stroke="#26352b" stroke-width="1.4"/>
-                    <circle cx="117" cy="253" r="27" stroke="#b6c1aa" stroke-width="1"/>
-                    <circle cx="137" cy="227" r="10" fill="#c5e58a"/>
-                    <path d="M69 253h96M117 205v96" stroke="#b6c1aa" stroke-width=".8"/>
-                    <g class="sequence-aperture"><circle cx="309" cy="253" r="35" stroke="#26352b" stroke-width="17" stroke-dasharray="31 5.65"/><circle cx="309" cy="253" r="15" stroke="#26352b" stroke-width="1.4"/></g>
-                    <path d="m489 229 35 24-35 24v-48Z" fill="#26352b" stroke="#26352b" stroke-width="3" stroke-linejoin="round"/>
-                    <path d="M449 218v-11h11M543 207h11v11M554 288v11h-11M460 299h-11v-11" stroke="#8a9a7d" stroke-width="1.1"/>
-                    <g fill="#68765e" font-size="9" font-family="ui-monospace,monospace"><text x="40" y="320">01</text><text x="232" y="320">02</text><text x="424" y="320">03</text></g>
-                  </g>
-                  <path d="M213 400c14-10 32-10 48 0" stroke="#26352b" stroke-width="1.4" stroke-linecap="round"/>
-                  <path d="m252 392 10 8-11 6" stroke="#26352b" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+              <div class="sequence-art" data-frame="1" aria-label="镜头画卡：从灵感到成片">
+                <div class="sequence-backdrop" aria-hidden="true"><span>MAKE<br>IT MOVE.</span></div>
+                <div class="shot-card shot-card-back" aria-hidden="true"><div class="shot-card-caption"><span>01 / 灵感</span><span>↗</span></div><div class="shot-landscape landscape-dawn"><div class="landscape-sun"></div><div class="landscape-hill hill-far"></div><div class="landscape-hill hill-near"></div></div></div>
+                <div class="shot-card shot-card-front">
+                  <div class="shot-card-caption"><span class="shot-current-label">02 / 分镜</span><span class="shot-timecode">00:00:08</span></div>
+                  <div class="shot-landscape landscape-main" role="img" aria-label="柔和日光下的绿色山峦与拱形取景框">
+                    <div class="landscape-sun"></div><div class="landscape-hill hill-far"></div><div class="landscape-hill hill-near"></div>
+                    <div class="landscape-arch"></div><div class="landscape-orb"></div>
+                    <span class="shot-viewfinder" aria-hidden="true"></span>
+                    <span class="shot-play" aria-hidden="true">↗</span>
+                  </div>
+                  <div class="shot-card-footer"><span>每一帧，都有故事。</span><span aria-hidden="true">✳</span></div>
+                </div>
+                <div class="sequence-sticker" aria-hidden="true">灵感<br>开镜！<span>↗</span></div>
               </div>
               <div class="sequence-timeline" role="group" aria-label="切换镜头序列">
-                <span class="sequence-timeline-mark" aria-hidden="true">+</span>
+                <span class="sequence-timeline-mark" aria-hidden="true">STORY IN MOTION</span>
                 <div class="sequence-track"><i aria-hidden="true"></i><button type="button" data-sequence-frame="0" aria-pressed="false" aria-label="切换至第一帧">01</button><button type="button" data-sequence-frame="1" aria-pressed="true" aria-label="切换至第二帧">02</button><button type="button" data-sequence-frame="2" aria-pressed="false" aria-label="切换至第三帧">03</button></div>
-                <span class="sequence-timeline-mark" aria-hidden="true">+</span>
               </div>
             </div>
           </section>
@@ -192,9 +177,9 @@
           <p>粘贴复刻分镜结果后，生成完整逐镜脚本和每组任务提示词。</p>
         </div>
         <div id="loading-state" class="loading-state" hidden aria-live="polite">
-          <div class="loading-line"></div>
-          <div class="loading-line short"></div>
-          <p>正在逐镜核对画面与台词，通常需要几十秒。</p>
+          <div class="generation-progress-heading"><strong id="story-generation-phase">正在提交分镜任务</strong><span id="story-generation-percent">预计 4%</span></div>
+          <div id="story-generation-progressbar" class="generation-progress-track" role="progressbar" aria-label="分镜任务预计进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="4"><span id="story-generation-progress-fill"></span></div>
+          <p id="story-generation-progress-detail">已等待 0 秒，完成后自动显示结果。</p>
         </div>
         <div id="result-summary" class="result-summary" hidden aria-live="polite"></div>
         <section id="storyboard-result" class="storyboard-result" hidden aria-labelledby="storyboard-title">
