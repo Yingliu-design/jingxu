@@ -654,6 +654,11 @@ function renderResult(data, inputSignature) {
     elements.storyStatus.textContent = `复刻内容已转成 ${data.meta.shotCount} 镜和 ${data.meta.taskCount} 个任务${dialogueNote}${languageNote}${formatNote}；修改内容后可以重新生成。`;
     elements.storyStatus.hidden = false;
   }
+  if (data.meta.warnings?.length) {
+    const status = elements.storyStatus.hidden ? "" : elements.storyStatus.textContent;
+    elements.storyStatus.textContent = [status, ...data.meta.warnings].filter(Boolean).join(" ");
+    elements.storyStatus.hidden = false;
+  }
   saveWorkspaceState();
 }
 

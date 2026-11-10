@@ -325,7 +325,6 @@ function sanitizeSourceLine(value, allowCoco = false) {
     .replace(/Pixar[- ]style/gi, "皮克斯风格")
     .replace(/J[- ]cut/gi, "声音先入")
     .replace(/3D/gi, "三维")
-    .replace(/[A-Za-z][A-Za-z0-9'’._/-]*/g, "")
     .replaceAll(protectedCoco, allowCoco ? "Coco" : "")
     .replace(/[（(]\s*[）)]/g, "")
     .replace(/\s+([，。；：！？、])/g, "$1")
@@ -381,7 +380,7 @@ function formatStructuredSourceStoryboard(script, totalShots) {
     title: "原分镜无损整理",
     shots,
     dialogueLockCount: sourceShots.reduce((total, shot) => total + shot.dialogues.length, 0),
-    chineseOnly: true,
+    chineseOnly: !needsTranslation(shots.map(shot => `${shot.visual} ${shot.dialogue}`).join("\n")),
     losslessFormat: true
   };
 }
@@ -1105,8 +1104,7 @@ function normalizeStoryboard(data, totalShots, lockedDialogues = [], allowCoco =
     shots.push({ number: index + 1, visual, dialogue });
   }
   const title = cleanMarkdown(String(data.title || "未命名故事"));
-  if (containsDisallowedEnglish(title, allowCoco)) return null;
-  if (shots.some((shot) => shot.visual.length < 12 || !shot.visual.startsWith("【") || containsDisallowedEnglish(shot.visual, allowCoco) || containsDisallowedEnglish(shot.dialogue, allowCoco))) return null;
+  if (shots.some((shot) => shot.visual.length < 12 || !shot.visual.startsWith("【"))) return null;
   if (lockedDialogues.length) {
     const expectedIds = lockedDialogues.map((item) => item.id);
     if (usedDialogueIds.length !== expectedIds.length || usedDialogueIds.some((id, index) => id !== expectedIds[index])) return null;
@@ -1115,7 +1113,8 @@ function normalizeStoryboard(data, totalShots, lockedDialogues = [], allowCoco =
     title,
     shots,
     dialogueLockCount: lockedDialogues.length,
-    chineseOnly: true,
+    chineseOnly: !containsDisallowedEnglish(title, allowCoco)
+      && shots.every(shot => !containsDisallowedEnglish(shot.visual, allowCoco) && !containsDisallowedEnglish(shot.dialogue, allowCoco)),
     losslessFormat: true
   };
 }
@@ -1615,9 +1614,17 @@ const server = createServer(async (request, response) => {
       if (isPreview && !input.shots.length) {
         throw new Error("本地预览只能整理已有分镜表格。输入故事后请点击“生成分镜与任务”。");
       }
-      const selection = !input.shots.length || needsTranslation(input.script) ? validateModelSelection(body) : null;
+      let selection = !input.shots.length ? validateModelSelection(body) : null;
       if (needsTranslation(input.script)) {
-        const script = await translateInput(input.script, (prompt, schema, name) => requestModelJson(selection, prompt, schema, name));
+        const script = await translateInput(input.script, (prompt, schema, name) => {
+          selection ||= validateModelSelection(body);
+          return requestModelJson(selection, prompt, schema, name);
+        }, {
+          strict: false,
+          onWarning: warning => {
+            console.error("[translation incomplete]", JSON.stringify({ time: new Date().toISOString(), ...warning }));
+          }
+        });
         input = validateInput({ ...body, script });
       }
       const generated = input.shots.length
@@ -1639,6 +1646,8 @@ const server = createServer(async (request, response) => {
           model: selection?.model || null,
           dialogueLockCount: generated.dialogueLockCount || 0,
           chineseOnly: Boolean(generated.chineseOnly),
+          warnings: !generated.chineseOnly
+            ? ["部分英文未完成翻译，已保留原文；分镜与任务已生成。"] : [],
           losslessFormat: Boolean(generated.losslessFormat),
           timingPlan: {
             durationSeconds: input.durationSeconds,

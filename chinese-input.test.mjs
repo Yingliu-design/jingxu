@@ -71,3 +71,54 @@ test("校验失败不返回部分翻译，不覆盖用户原稿", async () => {
   await assert.rejects(translateInput(source, async () => ({ lines: [{ id: 0, text: "Hello" }] })), /没有改动原始内容/);
   assert.equal(source, "主人：Hello！");
 });
+
+test("生成模式下翻译两次不合格也保留原文，不阻断生成", async () => {
+  const source = '| 1 | 【特写】主人拿起 RTX 显卡，旁边是 SFX 提示。 | 主人：Hello！ |';
+  let warning;
+  const result = await translateInput(source, async () => ({ lines: [] }), {
+    strict: false, onWarning: value => { warning = value; }
+  });
+  assert.equal(result, source);
+  assert.equal(warning.unresolvedCount, 3);
+});
+
+test("翻译服务不可用时已有分镜仍可按原文整理，不重复消耗请求", async () => {
+  const source = Array.from({length: 50}, (_, i) => `| ${i+1} | 【全景】原文 Hello. | 无 |`).join('\n');
+  let calls = 0;
+  let warning;
+  const result = await translateInput(source, async () => { calls++; throw new Error('quota'); }, {
+    strict: false, onWarning: value => { warning = value; }
+  });
+  assert.equal(result, source);
+  assert.equal(calls, 1);
+  assert.equal(warning.translationUnavailable, true);
+});
+
+test("部分翻译成功时只保留失败片段的原文", async () => {
+  const result = await translateInput('主人：Hello！猫：Good morning！', async () => ({lines:[{id:0,text:'你好'},{id:1,text:'Good morning'}]}), {strict:false});
+  assert.equal(result, '主人：你好！猫：Good morning！');
+});
+
+test("未翻译的英文台词或术语不再使有效分镜被判失败，顺序和数量仍校验", () => {
+  const source = readFileSync(new URL('./server.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function normalizeStoryboard(');
+  const context = vm.createContext({ cleanMarkdown: value => String(value).trim(),
+    containsDisallowedEnglish: value => /[a-z]/i.test(value) });
+  vm.runInContext(source.slice(start, source.indexOf('\nfunction ', start + 1)), context);
+  const data = {title:'演示',shots:[{visual:'【特写】主人拿起 RTX 显卡，仔细展示外观。',dialogue:'D1'}]};
+  const locks = [{id:'D1',rendered:'主人：Hello！'}];
+  const result = context.normalizeStoryboard(data, 1, locks);
+  assert.ok(result);
+  assert.equal(result.shots[0].dialogue, '主人：Hello！');
+  assert.equal(result.chineseOnly, false);
+  assert.equal(context.normalizeStoryboard(data, 2, locks), null);
+  assert.equal(context.normalizeStoryboard({...data,shots:[{...data.shots[0],dialogue:'D2'}]},1,locks),null);
+});
+
+test("无损整理不得删除尚未翻译的英文术语", () => {
+  const source = readFileSync(new URL('./server.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function sanitizeSourceLine(');
+  const context = vm.createContext({cleanMarkdown: value => String(value)});
+  vm.runInContext(source.slice(start, source.indexOf('\nfunction ', start + 1)), context);
+  assert.equal(context.sanitizeSourceLine('原文 RTX 显卡与 Bokeh 效果'), '原文 RTX 显卡与 Bokeh 效果');
+});
