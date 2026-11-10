@@ -1133,7 +1133,9 @@ function geminiRetrySeconds(response, payload) {
 
 async function requestGemini(url, options, timeoutMilliseconds = 120_000) {
   let lastRetrySeconds = 10;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  let serviceWasBusy = false;
+  const maxAttempts = 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     let result;
     try {
       result = await undiciFetch(url, {
@@ -1142,13 +1144,20 @@ async function requestGemini(url, options, timeoutMilliseconds = 120_000) {
         signal: AbortSignal.timeout(timeoutMilliseconds)
       });
     } catch (error) {
+      // Log only transport codes: URLs, request bodies and headers may contain secrets.
+      console.error("[gemini transport]", JSON.stringify({
+        time: new Date().toISOString(), attempt: attempt + 1,
+        code: error?.cause?.code || error?.code || error?.name || "UNKNOWN"
+      }));
       if (error?.name === "TimeoutError") throw new Error("Gemini 响应超时，请重试。");
-      // 偶发瞬时断连（ECONNRESET 等）：首次失败等待 2 秒后重试一次
-      if (attempt === 0) {
-        await wait(2_000);
+      if (attempt < maxAttempts - 1) {
+        await wait(2_000 * (attempt + 1));
         continue;
       }
-      throw new Error("无法连接 Gemini 服务，请检查网络后重试。");
+      if (serviceWasBusy) throw new Error("Gemini 模型繁忙，重试时连接中断。请稍后重试，或选择其他可用模型。");
+      throw new Error(geminiProxyDispatcher
+        ? "连接 Gemini 的代理请求中断，已自动重试。请确认代理可用后重试。"
+        : "与 Gemini 的连接中断，已自动重试。请检查网络后重试。");
     }
 
     const payload = await result.json().catch(() => ({}));
@@ -1169,11 +1178,15 @@ async function requestGemini(url, options, timeoutMilliseconds = 120_000) {
       throw new Error(`Gemini 免费额度正在限流，请等待约 ${lastRetrySeconds} 秒后再试。`);
     }
     if (result.status >= 500 || /high demand|overloaded|temporarily unavailable/i.test(providerMessage)) {
-      if (attempt === 0) {
-        await wait(5_000);
+      serviceWasBusy = true;
+      console.error("[gemini service]", JSON.stringify({
+        time: new Date().toISOString(), attempt: attempt + 1, status: result.status
+      }));
+      if (attempt < maxAttempts - 1) {
+        await wait(5_000 * (attempt + 1));
         continue;
       }
-      throw new Error("Gemini 当前使用人数较多，已自动重试但仍繁忙，请稍后再试。");
+      throw new Error("Gemini 模型当前繁忙，已自动重试 2 次。请稍后重试，或选择其他可用模型。");
     }
     throw new Error(providerMessage || `Gemini 请求失败（${result.status}）`);
   }
