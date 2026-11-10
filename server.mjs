@@ -22,6 +22,7 @@ import { createApiConfigStore, validateSettingsRequest } from "./api-config.mjs"
 import { buildStoryboardPrompt } from "./storyboard-prompt.mjs";
 import { mergeGeminiResponse } from "./gemini-response.mjs";
 import { restoreOriginalDialogues } from "./dialogue-placement.mjs";
+import { extractMarkdownShots } from "./markdown-shots.mjs";
 
 const root = fileURLToPath(new URL("./public", import.meta.url));
 const downloadsDir = fileURLToPath(new URL("./downloads", import.meta.url));
@@ -246,13 +247,7 @@ async function readMultipartForm(request) {
 }
 
 function extractShots(script) {
-  const rows = [];
-  const pattern = /^\|\s*\*{0,2}(\d+)\*{0,2}\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*$/gm;
-  let match;
-  while ((match = pattern.exec(script)) !== null) {
-    rows.push({ number: Number(match[1]), visual: match[2], dialogue: match[3] });
-  }
-  return rows;
+  return extractMarkdownShots(script);
 }
 
 function cleanMarkdown(text) {
@@ -1603,7 +1598,7 @@ const server = createServer(async (request, response) => {
         throw new Error("本地预览只能整理已有分镜表格。输入故事后请点击“生成分镜与任务”。");
       }
       let selection = !input.shots.length ? validateModelSelection(body) : null;
-      if (needsTranslation(input.script)) {
+      if (!input.shots.length && needsTranslation(input.script)) {
         const script = await translateInput(input.script, (prompt, schema, name) => {
           selection ||= validateModelSelection(body);
           return requestModelJson(selection, prompt, schema, name);
@@ -1635,7 +1630,9 @@ const server = createServer(async (request, response) => {
           dialogueLockCount: generated.dialogueLockCount || 0,
           chineseOnly: Boolean(generated.chineseOnly),
           warnings: [
-            ...(!generated.chineseOnly ? ["部分英文未完成翻译，已保留原文；分镜与任务已生成。"] : []),
+            ...(!generated.chineseOnly ? [input.shots.length
+              ? "已有分镜已按原文整理，英文提示词已保留；未调用翻译服务。"
+              : "部分英文未完成翻译，已保留原文；分镜与任务已生成。"] : []),
             ...(generated.dialoguePlacementNeedsReview ? ["已按原文顺序补回全部台词，请核对台词与画面的对应位置。"] : [])
           ],
           losslessFormat: Boolean(generated.losslessFormat),

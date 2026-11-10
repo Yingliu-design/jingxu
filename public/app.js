@@ -227,7 +227,7 @@ function updateCastSelection(castMode) {
 }
 
 function extractShotCount(text) {
-  return [...text.matchAll(/^\|\s*\*{0,2}(\d+)\*{0,2}\s*\|/gm)].length;
+  return [...text.matchAll(/^\s*\|\s*\*{0,2}(?:(?:shot|镜头|分镜)\s*)?(\d+)\*{0,2}\s*\|/gim)].length;
 }
 
 function readTaskCountOverride() {
