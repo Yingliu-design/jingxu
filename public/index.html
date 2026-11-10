@@ -14,6 +14,7 @@
     </script>
     <link rel="stylesheet" href="/styles.css?v=20260821-4">
     <link rel="stylesheet" href="/home.css?v=20261109-1">
+    <link rel="stylesheet" href="/api-settings.css?v=20261110-1">
     <script type="module" src="/app.js?v=20261109-1"></script>
   </head>
   <body>
@@ -30,10 +31,13 @@
         <button class="tool-tab" type="button" data-view="text" aria-selected="false" aria-controls="text-workspace">复刻分镜</button>
         <button class="tool-tab" type="button" data-view="story" aria-selected="false" aria-controls="story-workspace">分镜任务</button>
       </nav>
+      <div class="topbar-actions">
       <button class="home-entry" type="button" data-open-view="text">进入工作台 ↗</button>
       <div class="connection" id="connection" aria-live="polite">
         <span class="connection-dot" aria-hidden="true"></span>
         <span>正在检查模型</span>
+      </div>
+      <button class="api-settings-entry" type="button" data-api-settings>API 设置</button>
       </div>
     </header>
 
@@ -93,7 +97,7 @@
 
           <div class="model-controls" aria-label="AI 模型设置">
             <div class="field">
-              <label for="model-provider">模型服务商</label>
+              <div class="api-field-heading"><label for="model-provider">模型服务商</label><button type="button" class="text-button" data-api-settings="story">配置 API</button></div>
               <select id="model-provider">
                 <option value="gemini">Google Gemini</option>
                 <option value="openai">OpenAI GPT</option>
@@ -206,7 +210,7 @@
             </div>
             <div class="text-model-controls">
               <div class="field">
-                <label for="text-provider">模型服务商</label>
+                <div class="api-field-heading"><label for="text-provider">模型服务商</label><button type="button" class="text-button" data-api-settings="text">配置 API</button></div>
                 <select id="text-provider">
                   <option value="gemini">Google Gemini</option>
                   <option value="openai">OpenAI GPT</option>
@@ -367,5 +371,22 @@
     </template>
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <dialog id="api-settings-dialog" class="api-settings-dialog" aria-labelledby="api-settings-title">
+      <form id="api-settings-form" autocomplete="off">
+        <header class="api-settings-heading"><h2 id="api-settings-title">API 设置</h2><button type="button" class="api-dialog-close" id="api-settings-close" aria-label="关闭 API 设置">×</button></header>
+        <fieldset id="api-settings-fields">
+          <label for="api-settings-provider">模型服务商</label>
+          <select id="api-settings-provider"><option value="gemini">Google Gemini</option><option value="openai">OpenAI GPT</option><option value="deepseek">DeepSeek</option></select>
+          <div class="api-key-heading"><label for="api-settings-key">API Key</label><span id="api-key-state"></span></div>
+          <div class="api-key-input"><input type="password" id="api-settings-key" autocomplete="new-password" spellcheck="false" autocapitalize="off" aria-describedby="api-settings-note"><button type="button" id="api-key-toggle" aria-label="显示 API Key" aria-pressed="false">显示</button></div>
+          <label for="api-settings-model">默认模型</label>
+          <input type="text" id="api-settings-model" spellcheck="false" autocapitalize="off" required maxlength="120">
+          <label class="api-remove-key" id="api-remove-key-label" hidden><input type="checkbox" id="api-remove-key">移除此服务商的密钥</label>
+          <p id="api-settings-note" class="api-settings-note">密钥仅保存在本机服务端，留空保留已配置的密钥。</p>
+          <div id="api-settings-message" class="api-settings-message" role="status" aria-live="polite" hidden></div>
+          <footer class="api-settings-actions"><button type="button" class="button secondary" id="api-settings-test">检查连接</button><button type="submit" class="button primary" id="api-settings-save">保存配置</button></footer>
+        </fieldset>
+      </form>
+    </dialog>
   </body>
 </html>

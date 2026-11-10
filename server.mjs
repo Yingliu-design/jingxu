@@ -18,17 +18,13 @@ import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import { needsTranslation, translateInput } from "./chinese-input.mjs";
+import { createApiConfigStore, validateSettingsRequest } from "./api-config.mjs";
 
 const root = fileURLToPath(new URL("./public", import.meta.url));
 const downloadsDir = fileURLToPath(new URL("./downloads", import.meta.url));
 const promptLibraryPath = fileURLToPath(new URL("./data/prompts.json", import.meta.url));
 const port = Number(process.env.PORT || 4173);
-const geminiApiKey = process.env.GEMINI_API_KEY;
-const geminiModel = process.env.GEMINI_MODEL || "gemini-3.5-flash";
-const openaiApiKey = process.env.OPENAI_API_KEY;
-const openaiModel = process.env.OPENAI_MODEL || "gpt-5.4";
-const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
-const deepseekModel = process.env.DEEPSEEK_MODEL || "deepseek-v4-pro";
+const apiConfig = await createApiConfigStore(process.env.API_CONFIG_PATH || fileURLToPath(new URL("./data/api-config.json", import.meta.url)));
 const maxBodyBytes = 1_000_000;
 const maxVideoBytes = 95 * 1024 * 1024;
 const maxMultipartBodyBytes = maxVideoBytes + 2 * 1024 * 1024;
@@ -439,12 +435,12 @@ function validateTaskCount(value) {
 function validateModelSelection(body) {
   const provider = typeof body.provider === "string" ? body.provider : "gemini";
   if (!["gemini", "openai", "deepseek"].includes(provider)) throw new Error("不支持这个模型服务商。");
-  const fallbackModel = { gemini: geminiModel, openai: openaiModel, deepseek: deepseekModel }[provider];
+  const fallbackModel = { gemini: apiConfig.get("gemini").defaultModel, openai: apiConfig.get("openai").defaultModel, deepseek: apiConfig.get("deepseek").defaultModel }[provider];
   const selectedModel = typeof body.model === "string" && body.model.trim() ? body.model.trim() : fallbackModel;
   if (!/^[a-zA-Z0-9._:-]{2,120}$/.test(selectedModel)) throw new Error("模型名称格式不正确。");
-  if (provider === "gemini" && !geminiApiKey) throw new Error("尚未配置 GEMINI_API_KEY，请切换到已配置的服务商或先填写密钥。");
-  if (provider === "openai" && !openaiApiKey) throw new Error("尚未配置 OPENAI_API_KEY，请在 .env 中填写后重新启动。");
-  if (provider === "deepseek" && !deepseekApiKey) throw new Error("尚未配置 DEEPSEEK_API_KEY，请在 .env 中填写后重新启动。");
+  if (provider === "gemini" && !apiConfig.get("gemini").apiKey) throw new Error("尚未配置 GEMINI_API_KEY，请切换到已配置的服务商或先填写密钥。");
+  if (provider === "openai" && !apiConfig.get("openai").apiKey) throw new Error("尚未配置 OPENAI_API_KEY，请点击“配置 API”填写密钥。");
+  if (provider === "deepseek" && !apiConfig.get("deepseek").apiKey) throw new Error("尚未配置 DEEPSEEK_API_KEY，请点击“配置 API”填写密钥。");
   return { provider, model: selectedModel };
 }
 
@@ -1222,7 +1218,7 @@ async function requestGeminiJson(prompt, responseSchema, selectedModel) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(selectedModel)}:generateContent`;
   const payload = await requestGemini(url, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": geminiApiKey },
+    headers: { "content-type": "application/json", "x-goog-api-key": apiConfig.get("gemini").apiKey },
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
@@ -1254,7 +1250,7 @@ async function requestOpenAIJson(prompt, responseSchema, selectedModel, schemaNa
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${openaiApiKey}`
+      authorization: `Bearer ${apiConfig.get("openai").apiKey}`
     },
     body: JSON.stringify({
       model: selectedModel,
@@ -1292,7 +1288,7 @@ async function requestDeepSeekJson(prompt, responseSchema, selectedModel) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${deepseekApiKey}`
+      authorization: `Bearer ${apiConfig.get("deepseek").apiKey}`
     },
     body: JSON.stringify({
       model: selectedModel,
@@ -1337,7 +1333,7 @@ async function requestGeminiText(systemPrompt, input, selectedModel, video = nul
   parts.push({ text: input || "请严格按照系统提示词，完整分析视频中的画面、声音、对白与文字，并输出原始内容。" });
   const payload = await requestGemini(url, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": geminiApiKey },
+    headers: { "content-type": "application/json", "x-goog-api-key": apiConfig.get("gemini").apiKey },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: "user", parts }]
@@ -1351,7 +1347,7 @@ async function requestGeminiText(systemPrompt, input, selectedModel, video = nul
 async function requestOpenAIText(systemPrompt, input, selectedModel) {
   const result = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${openaiApiKey}` },
+    headers: { "content-type": "application/json", authorization: `Bearer ${apiConfig.get("openai").apiKey}` },
     body: JSON.stringify({
       model: selectedModel,
       messages: [
@@ -1375,7 +1371,7 @@ async function requestOpenAIText(systemPrompt, input, selectedModel) {
 async function requestDeepSeekText(systemPrompt, input, selectedModel) {
   const result = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${deepseekApiKey}` },
+    headers: { "content-type": "application/json", authorization: `Bearer ${apiConfig.get("deepseek").apiKey}` },
     body: JSON.stringify({
       model: selectedModel,
       messages: [
@@ -1418,11 +1414,12 @@ async function generateText(body) {
   return { text, promptTitle: prompt.title, videoName: body.video?.name || null, ...selection };
 }
 
-async function listModels(provider) {
+async function listModels(provider, draft) {
+  const { apiKey, defaultModel } = draft || apiConfig.get(provider);
   if (provider === "deepseek") {
-    if (!deepseekApiKey) return { provider, configured: false, defaultModel: deepseekModel, models: [] };
+    if (!apiKey) return { provider, configured: false, defaultModel: defaultModel, models: [] };
     const result = await fetch("https://api.deepseek.com/models", {
-      headers: { authorization: `Bearer ${deepseekApiKey}` },
+      headers: { authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(15_000)
     });
     const payload = await result.json();
@@ -1430,14 +1427,14 @@ async function listModels(provider) {
     const available = new Set((payload.data || []).map((item) => item.id));
     const preferred = ["deepseek-v4-pro", "deepseek-v4-flash"];
     const models = preferred.filter((id) => available.has(id));
-    if (available.has(deepseekModel) && !models.includes(deepseekModel)) models.unshift(deepseekModel);
-    return { provider, configured: true, defaultModel: available.has(deepseekModel) ? deepseekModel : models[0], models };
+    if (available.has(defaultModel) && !models.includes(defaultModel)) models.unshift(defaultModel);
+    return { provider, configured: true, defaultModel: available.has(defaultModel) ? defaultModel : models[0], models };
   }
 
   if (provider === "openai") {
-    if (!openaiApiKey) return { provider, configured: false, defaultModel: openaiModel, models: [] };
+    if (!apiKey) return { provider, configured: false, defaultModel: defaultModel, models: [] };
     const result = await fetch("https://api.openai.com/v1/models", {
-      headers: { authorization: `Bearer ${openaiApiKey}` },
+      headers: { authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(15_000)
     });
     const payload = await result.json();
@@ -1451,13 +1448,13 @@ async function listModels(provider) {
       .filter((id) => !preferredModels.includes(id))
       .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
     const models = [...preferredModels, ...otherModels];
-    if (available.has(openaiModel) && !models.includes(openaiModel)) models.unshift(openaiModel);
-    return { provider, configured: true, defaultModel: available.has(openaiModel) ? openaiModel : models[0], models };
+    if (available.has(defaultModel) && !models.includes(defaultModel)) models.unshift(defaultModel);
+    return { provider, configured: true, defaultModel: available.has(defaultModel) ? defaultModel : models[0], models };
   }
 
-  if (!geminiApiKey) return { provider, configured: false, defaultModel: geminiModel, models: [] };
+  if (!apiKey) return { provider, configured: false, defaultModel: defaultModel, models: [] };
   const result = await undiciFetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=100", {
-    headers: { "x-goog-api-key": geminiApiKey },
+    headers: { "x-goog-api-key": apiKey },
     ...(geminiProxyDispatcher ? { dispatcher: geminiProxyDispatcher } : {}),
     signal: AbortSignal.timeout(15_000)
   });
@@ -1468,8 +1465,8 @@ async function listModels(provider) {
     .map((item) => item.name?.replace(/^models\//, ""))
     .filter((id) => id?.startsWith("gemini-") && !/(embedding|image|tts|live|robotics|computer-use)/i.test(id))
     .sort((a, b) => a.localeCompare(b));
-  if (!models.includes(geminiModel)) models.unshift(geminiModel);
-  return { provider, configured: true, defaultModel: geminiModel, models };
+  if (!models.includes(defaultModel)) models.unshift(defaultModel);
+  return { provider, configured: true, defaultModel: defaultModel, models };
 }
 
 async function generateStoryboardWithModel(input, selection) {
@@ -1525,16 +1522,38 @@ async function serveStatic(request, response) {
 
 const server = createServer(async (request, response) => {
   try {
+    if (["/api/settings", "/api/settings/test"].includes(request.url)) {
+      validateSettingsRequest(request);
+      response.setHeader("cache-control", "no-store");
+      if (request.method === "GET" && request.url === "/api/settings") {
+        return sendJson(response, 200, { providers: apiConfig.publicStatus() });
+      }
+      if (request.method === "POST" && request.url === "/api/settings") {
+        return sendJson(response, 200, { providers: await apiConfig.save(await readJson(request)) });
+      }
+      if (request.method === "POST" && request.url === "/api/settings/test") {
+        const draft = apiConfig.draft(await readJson(request));
+        if (!draft.apiKey) throw new Error("请先填写 API Key。");
+        try {
+          const result = await listModels(draft.provider, draft);
+          return sendJson(response, 200, { connected: true, modelCount: result.models.length });
+        } catch (error) {
+          const message = error.name === "TimeoutError" ? "连接超时，请检查网络后重试。" : error.message || "连接失败，请检查密钥和网络。";
+          throw new Error(message.split(draft.apiKey).join("[已隐藏]"));
+        }
+      }
+      return sendJson(response, 405, { error: "不支持这个配置操作。" });
+    }
     if (request.method === "GET" && request.url === "/api/prompts") {
       return sendJson(response, 200, { prompts: await readPromptLibrary() });
     }
     if (request.method === "GET" && request.url === "/api/status") {
       return sendJson(response, 200, {
-        configured: Boolean(geminiApiKey || openaiApiKey || deepseekApiKey),
+        configured: Boolean(apiConfig.get("gemini").apiKey || apiConfig.get("openai").apiKey || apiConfig.get("deepseek").apiKey),
         providers: {
-          gemini: { configured: Boolean(geminiApiKey), defaultModel: geminiModel },
-          openai: { configured: Boolean(openaiApiKey), defaultModel: openaiModel },
-          deepseek: { configured: Boolean(deepseekApiKey), defaultModel: deepseekModel }
+          gemini: { configured: Boolean(apiConfig.get("gemini").apiKey), defaultModel: apiConfig.get("gemini").defaultModel },
+          openai: { configured: Boolean(apiConfig.get("openai").apiKey), defaultModel: apiConfig.get("openai").defaultModel },
+          deepseek: { configured: Boolean(apiConfig.get("deepseek").apiKey), defaultModel: apiConfig.get("deepseek").defaultModel }
         }
       });
     }
@@ -1651,7 +1670,7 @@ const server = createServer(async (request, response) => {
 
 server.listen(port, "127.0.0.1", () => {
   console.log(`分镜任务台已启动：http://127.0.0.1:${port}`);
-  console.log(geminiApiKey ? `Gemini 已连接：${geminiModel}` : "Gemini 未配置。");
-  console.log(openaiApiKey ? `OpenAI 已连接：${openaiModel}` : "OpenAI 未配置。");
-  console.log(deepseekApiKey ? `DeepSeek 已连接：${deepseekModel}` : "DeepSeek 未配置。");
+  console.log(apiConfig.get("gemini").apiKey ? `Gemini 已连接：${apiConfig.get("gemini").defaultModel}` : "Gemini 未配置。");
+  console.log(apiConfig.get("openai").apiKey ? `OpenAI 已连接：${apiConfig.get("openai").defaultModel}` : "OpenAI 未配置。");
+  console.log(apiConfig.get("deepseek").apiKey ? `DeepSeek 已连接：${apiConfig.get("deepseek").defaultModel}` : "DeepSeek 未配置。");
 });

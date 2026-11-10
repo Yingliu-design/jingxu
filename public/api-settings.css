@@ -1,0 +1,29 @@
+.topbar-actions { display:flex; align-items:center; justify-self:end; gap:18px; }
+.api-settings-entry { border:0; border-left:1px solid var(--line); background:transparent; padding:4px 0 4px 18px; color:var(--accent-dark); cursor:pointer; font:12px "PingFang SC",sans-serif; white-space:nowrap; }
+.api-field-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:.5rem; }
+.api-field-heading label { margin-bottom:0; }
+.api-field-heading .text-button { font:12px "PingFang SC",sans-serif; padding:0; white-space:nowrap; }
+.api-settings-dialog { width:min(480px,calc(100% - 32px)); max-height:calc(100dvh - 40px); padding:30px; border:1px solid var(--line); border-radius:12px; background:var(--paper); color:var(--ink); box-shadow:0 24px 80px #102a2533; font-family:"PingFang SC","Microsoft YaHei",sans-serif; overflow:auto; }
+.api-settings-dialog::backdrop { background:#10251d66; backdrop-filter:blur(3px); }
+.api-settings-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:26px; }
+.api-settings-heading h2 { font:600 23px "PingFang SC",sans-serif; margin:0; }
+.api-dialog-close { background:transparent; border:0; font-size:26px; width:32px; height:32px; cursor:pointer; color:var(--muted); }
+.api-settings-dialog fieldset { padding:0; margin:0; border:0; min-width:0; }
+.api-settings-dialog label { font-size:13px; font-weight:600; margin:0 0 8px; display:block; }
+.api-settings-dialog select,.api-settings-dialog input[type="text"],.api-settings-dialog input[type="password"] { width:100%; padding:11px 12px; border:1px solid var(--line-strong); border-radius:5px; background:#fff; font:14px "PingFang SC",sans-serif; min-height:44px; }
+.api-settings-dialog select { margin-bottom:22px; }
+.api-key-heading { display:flex; justify-content:space-between; align-items:center; }
+.api-key-heading span { color:var(--muted); font-size:11px; margin-bottom:8px; }
+.api-key-input { display:flex; margin-bottom:22px; border:1px solid var(--line-strong); border-radius:5px; background:white; }
+.api-key-input input:is([type="password"],[type="text"]) { border:0; min-width:0; background:transparent; }
+.api-key-input button { border:0; background:transparent; cursor:pointer; color:var(--accent-dark); font-size:12px; padding:0 12px; white-space:nowrap; }
+.api-settings-dialog .api-remove-key { margin-top:16px; display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); font-weight:400; cursor:pointer; }
+.api-remove-key input { width:15px; height:15px; margin:0; accent-color:var(--accent); }
+.api-settings-note { font-size:11px; line-height:1.8; color:var(--muted); margin:16px 0 22px; }
+.api-settings-message { font-size:12px; line-height:1.8; padding:10px 12px; background:var(--accent-soft); color:var(--accent-dark); margin-bottom:16px; overflow-wrap:anywhere; border-radius:4px; }
+.api-settings-message[data-error="true"] { background:var(--error-soft); color:var(--error); }
+.api-settings-actions { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.api-settings-actions .button { min-height:44px; font-size:13px; border-radius:5px; padding:11px; }
+.api-settings-dialog :focus-visible,.api-settings-entry:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.api-settings-dialog fieldset:disabled { opacity:.65; }
+@media(max-width:760px) { .topbar-actions { grid-row:1; grid-column:2; gap:12px; }.topbar-actions .connection,.topbar-actions .home-entry { display:none; }.api-settings-entry { border-left:0; padding:8px 0 8px 10px; }.api-settings-dialog { padding:24px; } }

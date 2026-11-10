@@ -7,3 +7,5 @@ logs/
 *.log
 .DS_Store
 coverage/
+data/api-config.json
+data/api-config.json.*.tmp

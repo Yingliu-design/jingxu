@@ -1,3 +1,5 @@
+import { initApiSettings } from "./api-settings.js";
+
 const elements = {
   toolTabs: [...document.querySelectorAll(".tool-tab")],
   storyWorkspace: document.querySelector("#story-workspace"),
@@ -973,7 +975,7 @@ async function loadModels() {
     if (!data.configured) {
       const keyName = providerKeyNames[provider] || "API_KEY";
       elements.textModel.append(new Option("尚未配置", data.defaultModel || ""));
-      elements.modelNote.textContent = `请在 .env 中填写 ${keyName} 并重新启动；不会影响另一家服务商。`;
+      elements.modelNote.textContent = `点击“配置 API”填写 ${keyName}，保存后立即生效。`;
     } else {
       const models = data.models?.length ? data.models : [data.defaultModel].filter(Boolean);
       models.forEach((model) => elements.textModel.append(new Option(model, model)));
@@ -1220,6 +1222,13 @@ document.querySelectorAll("[data-demo-shot]").forEach((button) => {
 window.addEventListener("pagehide", saveWorkspaceState);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") saveWorkspaceState();
+});
+initApiSettings({
+  getProvider: (view) => (view === "text" || (!view && !elements.textWorkspace.hidden)) ? elements.textProvider.value : elements.modelProvider.value,
+  onSaved: async () => {
+    await Promise.allSettled([loadStatus(), loadTextModels()]);
+    queueWorkspaceSave();
+  }
 });
 restoreWorkspaceState();
 updateEstimate();

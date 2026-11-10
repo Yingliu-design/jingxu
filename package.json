@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.mjs",
-    "check": "node --check server.mjs && node --check public/app.js && node --check chinese-input.mjs",
-    "test": "node --test chinese-input.test.mjs"
+    "check": "node --check server.mjs && node --check public/app.js && node --check public/api-settings.js && node --check api-config.mjs && node --check chinese-input.mjs",
+    "test": "node --test chinese-input.test.mjs api-config.test.mjs"
   },
   "engines": {
     "node": ">=22"
