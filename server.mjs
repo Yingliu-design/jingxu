@@ -21,6 +21,7 @@ import { needsTranslation, translateInput } from "./chinese-input.mjs";
 import { createApiConfigStore, validateSettingsRequest } from "./api-config.mjs";
 import { buildStoryboardPrompt } from "./storyboard-prompt.mjs";
 import { mergeGeminiResponse } from "./gemini-response.mjs";
+import { restoreOriginalDialogues } from "./dialogue-placement.mjs";
 
 const root = fileURLToPath(new URL("./public", import.meta.url));
 const downloadsDir = fileURLToPath(new URL("./downloads", import.meta.url));
@@ -276,12 +277,14 @@ function normalizeDialogueSpeaker(value) {
 
 function extractLockedDialogues(script) {
   const dialogues = [];
-  const addDialogue = (speakerValue, textValue, openingQuote = "", closingQuote = "") => {
+  const addDialogue = (speakerValue, textValue, openingQuote = "", closingQuote = "", position = 0) => {
     const speaker = normalizeDialogueSpeaker(speakerValue);
     const text = String(textValue || "").trim();
     if (!speaker || /^第[一二三四五六七八九十百\d]+[幕章节场]/u.test(speaker) || nonSpeakerLabels.test(speaker) || containsDisallowedEnglish(speaker, true) || !text) return;
     dialogues.push({
-      id: `D${dialogues.length + 1}`,
+      position,
+      sourceFraction: position / Math.max(1, script.length),
+      context: script.slice(Math.max(0, position - 120), position + text.length + 120),
       rendered: `${speaker}：${openingQuote}${text}${closingQuote}`
     });
   };
@@ -295,21 +298,24 @@ function extractLockedDialogues(script) {
     const quotePattern = /([“"「『])([^”"」』\n]{1,500})([”"」』])/gu;
     let quoteMatch;
     while ((quoteMatch = quotePattern.exec(match[2])) !== null) {
-      addDialogue(speaker, quoteMatch[2], quoteMatch[1], quoteMatch[3]);
+      const position = match.index + match[0].length - match[2].length + quoteMatch.index + quoteMatch[1].length;
+      addDialogue(speaker, quoteMatch[2], quoteMatch[1], quoteMatch[3], position);
     }
   }
 
   const quotedPattern = /(?:^|[\n|。！？；;：:】\]])\s*(?:[-*]\s*)?([A-Za-z\u3400-\u9fff][A-Za-z0-9\u3400-\u9fff·（）()_\- ]{0,30})\s*[：:]\s*([“"「『])([^”"」』\n]{1,500})([”"」』])/gmu;
   while ((match = quotedPattern.exec(script)) !== null) {
-    addDialogue(match[1], match[3], match[2], match[4]);
+    addDialogue(match[1], match[3], match[2], match[4], match.index + match[0].length - match[3].length - match[4].length);
   }
 
   const linePattern = /^\s*(?:[-*]\s*)?([A-Za-z\u3400-\u9fff][A-Za-z0-9\u3400-\u9fff·（）()_\- ]{0,30})\s*[：:]\s*([^\n]{1,500})$/gmu;
   while ((match = linePattern.exec(script)) !== null) {
     if (/[“"「『”」』]/u.test(match[2])) continue;
-    addDialogue(match[1], match[2]);
+    addDialogue(match[1], match[2], "", "", match.index + match[0].length - match[2].length);
   }
-  return dialogues;
+  return dialogues.sort((a, b) => a.position - b.position)
+    .filter((item, index, all) => !index || item.position !== all[index - 1].position)
+    .map((item, index) => ({ ...item, id: `D${index + 1}` }));
 }
 
 function sanitizeSourceLine(value, allowCoco = false) {
@@ -1083,39 +1089,24 @@ function organizeTasks({ shots, taskCount }) {
 
 function normalizeStoryboard(data, totalShots, lockedDialogues = [], allowCoco = false) {
   if (!data || !Array.isArray(data.shots) || data.shots.length !== totalShots) return null;
-  const dialogueById = new Map(lockedDialogues.map((item) => [item.id, item.rendered]));
-  const usedDialogueIds = [];
-  const shots = [];
+  let shots = [];
   for (const [index, shot] of data.shots.entries()) {
     const visual = cleanMarkdown(String(shot.visual || ""));
     const rawDialogue = cleanMarkdown(String(shot.dialogue || "无"));
-    let dialogue = rawDialogue;
-    if (lockedDialogues.length) {
-      const ids = [...rawDialogue.matchAll(/\bD(\d+)\b/gi)].map((match) => `D${Number(match[1])}`);
-      if (!ids.length) {
-        if (!/^(?:无|none)$/i.test(rawDialogue)) return null;
-        dialogue = "无";
-      } else {
-        if (ids.some((id) => !dialogueById.has(id))) return null;
-        usedDialogueIds.push(...ids);
-        dialogue = ids.map((id) => dialogueById.get(id)).join("\n");
-      }
-    }
-    shots.push({ number: index + 1, visual, dialogue });
+    shots.push({ number: index + 1, visual, dialogue: rawDialogue });
   }
   const title = cleanMarkdown(String(data.title || "未命名故事"));
   if (shots.some((shot) => shot.visual.length < 12 || !shot.visual.startsWith("【"))) return null;
-  if (lockedDialogues.length) {
-    const expectedIds = lockedDialogues.map((item) => item.id);
-    if (usedDialogueIds.length !== expectedIds.length || usedDialogueIds.some((id, index) => id !== expectedIds[index])) return null;
-  }
+  const restored = restoreOriginalDialogues(shots, lockedDialogues);
+  shots = restored.shots;
   return {
     title,
     shots,
     dialogueLockCount: lockedDialogues.length,
+    dialoguePlacementNeedsReview: restored.repaired,
     chineseOnly: !containsDisallowedEnglish(title, allowCoco)
       && shots.every(shot => !containsDisallowedEnglish(shot.visual, allowCoco) && !containsDisallowedEnglish(shot.dialogue, allowCoco)),
-    losslessFormat: true
+    losslessFormat: !restored.repaired
   };
 }
 
@@ -1468,10 +1459,7 @@ async function generateStoryboardWithModel(input, selection) {
     const storyboard = normalizeStoryboard(data, input.totalShots, lockedDialogues, allowCoco);
     if (storyboard) return storyboard;
   }
-  if (lockedDialogues.length) {
-    throw new Error(`AI 未能在 ${input.totalShots} 镜中完整放回 ${lockedDialogues.length} 句原台词；本次没有输出改写后的台词，请重试。`);
-  }
-  throw new Error(`AI 未能稳定生成 ${input.totalShots} 镜，请缩短故事或减少总分镜数后重试。`);
+  throw new Error(`生成结果的镜头数量或画面结构不完整，未达到 ${input.totalShots} 镜。原始内容仍保留，请重试。`);
 }
 
 async function generateFunnyStory(durationSeconds, selection) {
@@ -1646,8 +1634,10 @@ const server = createServer(async (request, response) => {
           model: selection?.model || null,
           dialogueLockCount: generated.dialogueLockCount || 0,
           chineseOnly: Boolean(generated.chineseOnly),
-          warnings: !generated.chineseOnly
-            ? ["部分英文未完成翻译，已保留原文；分镜与任务已生成。"] : [],
+          warnings: [
+            ...(!generated.chineseOnly ? ["部分英文未完成翻译，已保留原文；分镜与任务已生成。"] : []),
+            ...(generated.dialoguePlacementNeedsReview ? ["已按原文顺序补回全部台词，请核对台词与画面的对应位置。"] : [])
+          ],
           losslessFormat: Boolean(generated.losslessFormat),
           timingPlan: {
             durationSeconds: input.durationSeconds,

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { translateInput } from "./chinese-input.mjs";
+import { restoreOriginalDialogues } from "./dialogue-placement.mjs";
 
 test("章节标题不作为台词锁定", () => {
   const source = readFileSync(new URL("./server.mjs", import.meta.url), "utf8");
@@ -102,7 +103,7 @@ test("部分翻译成功时只保留失败片段的原文", async () => {
 test("未翻译的英文台词或术语不再使有效分镜被判失败，顺序和数量仍校验", () => {
   const source = readFileSync(new URL('./server.mjs', import.meta.url), 'utf8');
   const start = source.indexOf('function normalizeStoryboard(');
-  const context = vm.createContext({ cleanMarkdown: value => String(value).trim(),
+  const context = vm.createContext({ restoreOriginalDialogues, cleanMarkdown: value => String(value).trim(),
     containsDisallowedEnglish: value => /[a-z]/i.test(value) });
   vm.runInContext(source.slice(start, source.indexOf('\nfunction ', start + 1)), context);
   const data = {title:'演示',shots:[{visual:'【特写】主人拿起 RTX 显卡，仔细展示外观。',dialogue:'D1'}]};
@@ -112,7 +113,20 @@ test("未翻译的英文台词或术语不再使有效分镜被判失败，顺�
   assert.equal(result.shots[0].dialogue, '主人：Hello！');
   assert.equal(result.chineseOnly, false);
   assert.equal(context.normalizeStoryboard(data, 2, locks), null);
-  assert.equal(context.normalizeStoryboard({...data,shots:[{...data.shots[0],dialogue:'D2'}]},1,locks),null);
+  const repaired = context.normalizeStoryboard({...data,shots:[{...data.shots[0],dialogue:'D2'}]},1,locks);
+  assert.equal(repaired.shots[0].dialogue, '主人：Hello！');
+  assert.equal(repaired.dialoguePlacementNeedsReview,true);
+});
+
+test('不同台词格式按原文位置排序，同一句重复出现不被删掉', () => {
+  const source = readFileSync(new URL('./server.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function containsDisallowedEnglish');
+  const context = vm.createContext({});
+  vm.runInContext(source.slice(start,source.indexOf('function sanitizeSourceLine',start)),context);
+  const lines = context.extractLockedDialogues('主人：“第一句。”\n台词（布丁）： “第二句。”\n主人：第三句。\n主人：“第一句。”');
+  assert.equal(lines.length,4);
+  assert.equal(lines.map(l=>l.rendered).join('\n'),'主人：“第一句。”\n布丁：“第二句。”\n主人：第三句。\n主人：“第一句。”');
+  assert.equal(lines.map(l=>l.id).join(','),'D1,D2,D3,D4');
 });
 
 test("无损整理不得删除尚未翻译的英文术语", () => {
