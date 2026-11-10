@@ -2,7 +2,7 @@
 .api-settings-entry { border:0; border-left:1px solid var(--line); background:transparent; padding:4px 0 4px 18px; color:var(--accent-dark); cursor:pointer; font:12px "PingFang SC",sans-serif; white-space:nowrap; }
 .api-field-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:.5rem; }
 .api-field-heading label { margin-bottom:0; }
-.api-field-heading .text-button { font:12px "PingFang SC",sans-serif; padding:0; white-space:nowrap; }
+.api-field-heading .text-button { font:12px/1.5 "PingFang SC",sans-serif; min-height:0; padding:0; white-space:nowrap; }
 .api-settings-dialog { width:min(480px,calc(100% - 32px)); max-height:calc(100dvh - 40px); padding:30px; border:1px solid var(--line); border-radius:12px; background:var(--paper); color:var(--ink); box-shadow:0 24px 80px #102a2533; font-family:"PingFang SC","Microsoft YaHei",sans-serif; overflow:auto; }
 .api-settings-dialog::backdrop { background:#10251d66; backdrop-filter:blur(3px); }
 .api-settings-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:26px; }
