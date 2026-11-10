@@ -3,28 +3,34 @@
 .api-field-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:.5rem; }
 .api-field-heading label { margin-bottom:0; }
 .api-field-heading .text-button { font:12px/1.5 "PingFang SC",sans-serif; min-height:0; padding:0; white-space:nowrap; }
-.api-settings-dialog { width:min(480px,calc(100% - 32px)); max-height:calc(100dvh - 40px); padding:30px; border:1px solid var(--line); border-radius:12px; background:var(--paper); color:var(--ink); box-shadow:0 24px 80px #102a2533; font-family:"PingFang SC","Microsoft YaHei",sans-serif; overflow:auto; }
+.api-settings-dialog { width:min(1020px,calc(100% - 64px)); max-height:calc(100dvh - 40px); padding:30px; border:1px solid var(--line); border-radius:12px; background:var(--paper); color:var(--ink); box-shadow:0 24px 80px #102a2533; font-family:"PingFang SC","Microsoft YaHei",sans-serif; }
 .api-settings-dialog::backdrop { background:#10251d66; backdrop-filter:blur(3px); }
 .api-settings-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:26px; }
 .api-settings-heading h2 { font:600 23px "PingFang SC",sans-serif; margin:0; }
 .api-dialog-close { background:transparent; border:0; font-size:26px; width:32px; height:32px; cursor:pointer; color:var(--muted); }
 .api-settings-dialog fieldset { padding:0; margin:0; border:0; min-width:0; }
+.api-settings-layout { display:grid; grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr); gap:36px; align-items:start; }
+.api-settings-config-column { min-width:0; }
+.api-settings-mobile-tabs { display:none; }
 .api-settings-dialog label { font-size:13px; font-weight:600; margin:0 0 8px; display:block; }
 .api-settings-dialog select,.api-settings-dialog input[type="text"],.api-settings-dialog input[type="password"] { width:100%; padding:11px 12px; border:1px solid var(--line-strong); border-radius:5px; background-color:#fff; font:14px "PingFang SC",sans-serif; min-height:44px; }
-.api-settings-dialog select { margin-bottom:12px; padding-right:2.75rem; }
-.api-guide { margin-bottom:22px; font-size:12px; line-height:1.8; }
-.api-guide>summary { min-height:0; display:list-item; width:fit-content; padding:2px 0; color:var(--accent-dark); cursor:pointer; }
-.api-guide-content { margin-top:12px; padding:16px 18px; border:1px solid var(--line); border-radius:6px; background:var(--surface); }
+.api-settings-dialog select { margin-bottom:22px; padding-right:2.75rem; }
+.api-guide { margin:0; padding-left:30px; border-left:1px solid var(--line); font-size:12px; line-height:1.75; min-width:0; }
+.api-guide h3 { margin:0 0 14px; font-size:15px; font-weight:600; }
+.api-guide-tabs,.api-settings-mobile-tabs { gap:20px; margin-bottom:18px; border-bottom:1px solid var(--line); }
+.api-guide-tabs { display:flex; }
+.api-guide-tabs button,.api-settings-mobile-tabs button { border:0; border-bottom:2px solid transparent; padding:0 0 8px; background:transparent; font:12px/1.5 "PingFang SC",sans-serif; color:var(--muted); cursor:pointer; }
+.api-guide-tabs button[aria-selected="true"],.api-settings-mobile-tabs button[aria-selected="true"] { color:var(--accent-dark); border-bottom-color:var(--accent); }
+.api-guide-content { padding:0; }
 .api-guide-content ol { margin:0; padding-left:20px; }
-.api-guide-content ol>li { padding-left:4px; margin-bottom:14px; }
+.api-guide-content ol>li { padding-left:4px; margin-bottom:16px; }
 .api-guide-content ol>li:last-child { margin-bottom:0; }
 .api-guide-content strong { font-weight:600; }
 .api-guide-content p { margin:5px 0; color:var(--muted); }
 .api-guide-content a { color:var(--accent-dark); text-underline-offset:3px; }
-.api-guide-content .api-guide-provider-note { margin:16px 0 12px; padding-top:12px; border-top:1px solid var(--line); }
-.api-guide-errors>summary { min-height:0; padding:2px 0; cursor:pointer; }
-.api-guide-errors ul { margin:8px 0 12px; padding-left:18px; color:var(--muted); }
-.api-guide-errors li { margin-bottom:8px; }
+.api-guide-content .api-guide-provider-note { margin:18px 0 0; padding-top:12px; border-top:1px solid var(--line); }
+.api-guide-errors ul { margin:0; padding-left:18px; color:var(--muted); }
+.api-guide-errors li { margin-bottom:16px; }
 .api-guide-docs { display:inline-block; margin-top:10px; }
 .api-key-heading { display:flex; justify-content:space-between; align-items:center; }
 .api-key-heading span { color:var(--muted); font-size:11px; margin-bottom:8px; }
@@ -40,4 +46,6 @@
 .api-settings-actions .button { min-height:44px; font-size:13px; border-radius:5px; padding:11px; }
 .api-settings-dialog :focus-visible,.api-settings-entry:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
 .api-settings-dialog fieldset:disabled { opacity:.65; }
-@media(max-width:760px) { .topbar-actions { grid-row:1; grid-column:2; gap:12px; }.topbar-actions .connection,.topbar-actions .home-entry { display:none; }.api-settings-entry { border-left:0; padding:8px 0 8px 10px; }.api-settings-dialog { padding:24px; } }
+@media(max-width:800px) { .api-settings-dialog { width:calc(100% - 32px); padding:24px; }.api-settings-layout { display:block; }.api-settings-mobile-tabs { display:flex; }.api-guide { display:none; padding:0; border:0; }.api-guide h3 { display:none; }.api-settings-dialog.show-guide .api-guide { display:block; }.api-settings-dialog.show-guide .api-settings-config-column { display:none; }.api-settings-heading { margin-bottom:20px; } }
+@media(max-width:760px) { .topbar-actions { grid-row:1; grid-column:2; gap:12px; }.topbar-actions .connection,.topbar-actions .home-entry { display:none; }.api-settings-entry { border-left:0; padding:8px 0 8px 10px; } }
+@media(max-height:720px) { .api-settings-dialog { padding:20px 24px; }.api-settings-heading { margin-bottom:16px; }.api-settings-dialog select,.api-key-input { margin-bottom:16px; }.api-guide { font-size:11.5px; line-height:1.65; }.api-guide h3 { margin-bottom:10px; }.api-guide-tabs,.api-settings-mobile-tabs { margin-bottom:12px; }.api-guide-content ol>li,.api-guide-errors li { margin-bottom:10px; }.api-guide-content .api-guide-provider-note { margin-top:12px; padding-top:10px; }.api-settings-note { margin:12px 0 16px; } }

@@ -12,7 +12,6 @@ export function initApiSettings({ getProvider, onSaved }) {
   const message = document.querySelector("#api-settings-message");
   const save = document.querySelector("#api-settings-save");
   const test = document.querySelector("#api-settings-test");
-  const guide = document.querySelector("#api-config-guide");
   const guides = {
     gemini: {
       create: "登录 Google AI Studio，在 API 密钥页面创建或选择项目，创建并复制密钥。",
@@ -80,7 +79,12 @@ export function initApiSettings({ getProvider, onSaved }) {
   document.querySelectorAll("[data-api-settings]").forEach((button) => button.addEventListener("click", async () => {
     if (dialog.open) return;
     provider.value = getProvider(button.dataset.apiSettings);
-    guide.open = false;
+    dialog.classList.remove("show-guide");
+    document.querySelectorAll("[data-settings-panel]").forEach((button) => {
+      const selected = button.dataset.settingsPanel === "config";
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    });
     dialog.showModal();
     clearKey();
     setBusy(true);
@@ -98,6 +102,33 @@ export function initApiSettings({ getProvider, onSaved }) {
     }
   }));
   provider.addEventListener("change", showProvider);
+  function activateTab(button, group, activate) {
+    group.forEach((item) => {
+      const selected = item === button;
+      item.setAttribute("aria-selected", String(selected));
+      item.tabIndex = selected ? 0 : -1;
+    });
+    activate(button);
+  }
+  function bindTabs(selector, activate) {
+    const group = [...document.querySelectorAll(selector)];
+    group.forEach((button, index) => {
+      button.tabIndex = index === 0 ? 0 : -1;
+      button.addEventListener("click", () => activateTab(button, group, activate));
+      button.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const next = event.key === "Home" ? 0 : event.key === "End" ? group.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + group.length) % group.length;
+        group[next].focus();
+        activateTab(group[next], group, activate);
+      });
+    });
+  }
+  bindTabs("[data-guide-panel]", (button) => {
+    document.querySelector("#api-guide-steps").hidden = button.dataset.guidePanel !== "steps";
+    document.querySelector("#api-guide-errors").hidden = button.dataset.guidePanel !== "errors";
+  });
+  bindTabs("[data-settings-panel]", (button) => dialog.classList.toggle("show-guide", button.dataset.settingsPanel === "guide"));
   toggle.addEventListener("click", () => {
     const visible = key.type === "password";
     key.type = visible ? "text" : "password";

@@ -374,22 +374,12 @@
     <dialog id="api-settings-dialog" class="api-settings-dialog" aria-labelledby="api-settings-title">
       <form id="api-settings-form" autocomplete="off">
         <header class="api-settings-heading"><h2 id="api-settings-title">API 设置</h2><button type="button" class="api-dialog-close" id="api-settings-close" aria-label="关闭 API 设置">×</button></header>
+        <div class="api-settings-mobile-tabs" role="tablist" aria-label="API 设置内容"><button type="button" role="tab" data-settings-panel="config" aria-selected="true" aria-controls="api-settings-config-column">API 配置</button><button type="button" role="tab" data-settings-panel="guide" aria-selected="false" aria-controls="api-config-guide">配置教程</button></div>
         <fieldset id="api-settings-fields">
+        <div class="api-settings-layout">
+        <div class="api-settings-config-column" id="api-settings-config-column">
           <label for="api-settings-provider">模型服务商</label>
           <select id="api-settings-provider"><option value="gemini">Google Gemini</option><option value="openai">OpenAI GPT</option><option value="deepseek">DeepSeek</option></select>
-          <details class="api-guide" id="api-config-guide">
-            <summary>配置教程</summary>
-            <div class="api-guide-content">
-              <ol>
-                <li><strong>获取 API Key</strong><p id="api-guide-create">登录 Google AI Studio，在 API 密钥页面创建或选择项目，创建并复制密钥。</p><a id="api-guide-key-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">打开密钥页面 ↗</a></li>
-                <li><strong>回到这里填写</strong><p>把完整密钥粘贴到下方 API Key 输入框。默认模型可先沿用当前值，保存后再从工作区选择账号可用的模型。</p></li>
-                <li><strong>检查并保存</strong><p>点击「检查连接」验证密钥和网络，再点击「保存配置」。看到「配置已保存，立即生效」后即可关闭弹窗开始使用。</p></li>
-              </ol>
-              <p class="api-guide-provider-note" id="api-guide-provider-note">上传视频进行分析需要选择 Gemini；服务可用地区和额度以 Google 官方说明为准。</p>
-              <details class="api-guide-errors"><summary>连接失败怎么办？</summary><ul><li><strong>密钥无效或权限不足：</strong>确认服务商选对、密钥复制完整，并检查 API 项目权限。</li><li><strong>余额、额度不足或请求过多：</strong>查看对应平台的账单和配额，必要时充值或稍后重试。</li><li><strong>模型不可用：</strong>选择该账号模型列表中可用的文本模型。连接检查成功不代表拥有所有模型的调用权限。</li><li><strong>连接超时：</strong>检查本机网络是否能访问对应官方 API 服务；仅能打开官网不代表 API 请求一定可达。</li></ul></details>
-              <a class="api-guide-docs" id="api-guide-docs" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noopener noreferrer">查看官方教程 ↗</a>
-            </div>
-          </details>
           <div class="api-key-heading"><label for="api-settings-key">API Key</label><span id="api-key-state"></span></div>
           <div class="api-key-input"><input type="password" id="api-settings-key" autocomplete="new-password" spellcheck="false" autocapitalize="off" aria-describedby="api-settings-note"><button type="button" id="api-key-toggle" aria-label="显示 API Key" aria-pressed="false">显示</button></div>
           <label for="api-settings-model">默认模型</label>
@@ -398,6 +388,22 @@
           <p id="api-settings-note" class="api-settings-note">密钥仅保存在本机服务端，留空保留已配置的密钥。</p>
           <div id="api-settings-message" class="api-settings-message" role="status" aria-live="polite" hidden></div>
           <footer class="api-settings-actions"><button type="button" class="button secondary" id="api-settings-test">检查连接</button><button type="submit" class="button primary" id="api-settings-save">保存配置</button></footer>
+        </div>
+          <section class="api-guide" id="api-config-guide" aria-label="API 配置教程">
+            <h3>配置教程</h3>
+            <div class="api-guide-tabs" role="tablist" aria-label="教程内容"><button type="button" role="tab" id="api-guide-steps-tab" aria-selected="true" aria-controls="api-guide-steps" data-guide-panel="steps">配置步骤</button><button type="button" role="tab" id="api-guide-errors-tab" aria-selected="false" aria-controls="api-guide-errors" data-guide-panel="errors">连接排查</button></div>
+            <div class="api-guide-content">
+              <div id="api-guide-steps" role="tabpanel" aria-labelledby="api-guide-steps-tab"><ol>
+                <li><strong>获取 API Key</strong><p id="api-guide-create">登录 Google AI Studio，在 API 密钥页面创建或选择项目，创建并复制密钥。</p><a id="api-guide-key-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">打开密钥页面 ↗</a></li>
+                <li><strong>回到这里填写</strong><p>将密钥粘贴到 API Key 输入框。默认模型先沿用当前值，保存后可从工作区切换可用模型。</p></li>
+                <li><strong>检查并保存</strong><p>点击「检查连接」，成功后点击「保存配置」。配置立即生效，关闭弹窗即可使用。</p></li>
+              </ol>
+              <p class="api-guide-provider-note" id="api-guide-provider-note">上传视频进行分析需要选择 Gemini；服务可用地区和额度以 Google 官方说明为准。</p>
+              </div><div class="api-guide-errors" id="api-guide-errors" role="tabpanel" aria-labelledby="api-guide-errors-tab" hidden><ul><li><strong>密钥无效或权限不足：</strong>确认服务商选对、密钥复制完整，并检查 API 项目权限。</li><li><strong>余额、额度不足或请求过多：</strong>查看对应平台的账单和配额，必要时充值或稍后重试。</li><li><strong>模型不可用：</strong>选择该账号模型列表中可用的文本模型。连接检查成功不代表拥有所有模型的调用权限。</li><li><strong>连接超时：</strong>检查本机网络是否能访问对应官方 API 服务；仅能打开官网不代表 API 请求一定可达。</li></ul></div>
+              <a class="api-guide-docs" id="api-guide-docs" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noopener noreferrer">查看官方教程 ↗</a>
+            </div>
+          </section>
+        </div>
         </fieldset>
       </form>
     </dialog>
