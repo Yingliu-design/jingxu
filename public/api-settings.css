@@ -10,8 +10,8 @@
 .api-dialog-close { background:transparent; border:0; font-size:26px; width:32px; height:32px; cursor:pointer; color:var(--muted); }
 .api-settings-dialog fieldset { padding:0; margin:0; border:0; min-width:0; }
 .api-settings-dialog label { font-size:13px; font-weight:600; margin:0 0 8px; display:block; }
-.api-settings-dialog select,.api-settings-dialog input[type="text"],.api-settings-dialog input[type="password"] { width:100%; padding:11px 12px; border:1px solid var(--line-strong); border-radius:5px; background:#fff; font:14px "PingFang SC",sans-serif; min-height:44px; }
-.api-settings-dialog select { margin-bottom:22px; }
+.api-settings-dialog select,.api-settings-dialog input[type="text"],.api-settings-dialog input[type="password"] { width:100%; padding:11px 12px; border:1px solid var(--line-strong); border-radius:5px; background-color:#fff; font:14px "PingFang SC",sans-serif; min-height:44px; }
+.api-settings-dialog select { margin-bottom:22px; padding-right:2.75rem; }
 .api-key-heading { display:flex; justify-content:space-between; align-items:center; }
 .api-key-heading span { color:var(--muted); font-size:11px; margin-bottom:8px; }
 .api-key-input { display:flex; margin-bottom:22px; border:1px solid var(--line-strong); border-radius:5px; background:white; }
