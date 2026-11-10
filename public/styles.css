@@ -1,5 +1,6 @@
 :root {
   color-scheme: light;
+  scrollbar-gutter: stable;
   --paper: oklch(98% 0.008 92);
   --surface: oklch(100% 0.004 92);
   --ink: oklch(22% 0.018 164);
@@ -58,7 +59,7 @@ button { color: inherit; }
   min-height: 4.5rem;
   padding: 0 var(--space-xl);
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
