@@ -18,7 +18,7 @@
 需要 Node.js 22 或更新版本。
 
 ```bash
-git clone https://github.com/mrshijhy-design/jingxu.git
+git clone https://github.com/Yingliu-design/jingxu.git
 cd jingxu
 npm ci
 cp .env.example .env
