@@ -1621,7 +1621,10 @@ const server = createServer(async (request, response) => {
         input = validateInput({ ...body, script });
       }
       const generated = input.shots.length
-        ? { title: "已有分镜", shots: input.shots }
+        ? {
+          title: "已有分镜", shots: input.shots,
+          chineseOnly: input.shots.every(shot => !needsTranslation(`${shot.visual} ${shot.dialogue}`))
+        }
         : await generateStoryboardWithModel(input, selection);
       const tasks = organizeTasks({ shots: generated.shots, taskCount: input.taskCount });
       return sendJson(response, 200, {
