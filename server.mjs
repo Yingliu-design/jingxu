@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import { needsTranslation, translateInput } from "./chinese-input.mjs";
 import { createApiConfigStore, validateSettingsRequest } from "./api-config.mjs";
 import { buildStoryboardPrompt } from "./storyboard-prompt.mjs";
+import { mergeGeminiResponse } from "./gemini-response.mjs";
 
 const root = fileURLToPath(new URL("./public", import.meta.url));
 const downloadsDir = fileURLToPath(new URL("./downloads", import.meta.url));
@@ -1132,17 +1133,23 @@ function geminiRetrySeconds(response, payload) {
 }
 
 async function requestGemini(url, options, timeoutMilliseconds = 120_000) {
+  // Receive chunks while generation is running instead of waiting for a single
+  // large response through proxies with idle connection limits.
+  const streamUrl = url.replace(/:generateContent$/, ":streamGenerateContent");
   let lastRetrySeconds = 10;
   let serviceWasBusy = false;
   const maxAttempts = 3;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     let result;
+    let rawPayload;
     try {
-      result = await undiciFetch(url, {
+      result = await undiciFetch(streamUrl, {
         ...options,
         ...(geminiProxyDispatcher ? { dispatcher: geminiProxyDispatcher } : {}),
         signal: AbortSignal.timeout(timeoutMilliseconds)
       });
+      // Keep body reads inside the retry boundary: streams can break after headers.
+      rawPayload = result.ok ? await result.json() : await result.json().catch(() => ({}));
     } catch (error) {
       // Log only transport codes: URLs, request bodies and headers may contain secrets.
       console.error("[gemini transport]", JSON.stringify({
@@ -1160,15 +1167,16 @@ async function requestGemini(url, options, timeoutMilliseconds = 120_000) {
         : "与 Gemini 的连接中断，已自动重试。请检查网络后重试。");
     }
 
-    const payload = await result.json().catch(() => ({}));
-    if (result.ok) return payload;
+    const payload = mergeGeminiResponse(rawPayload);
+    if (result.ok && !payload.error) return payload;
+    const status = payload?.error?.code || result.status;
     const providerMessage = String(payload?.error?.message || "");
-    if (result.status === 429) {
+    if (status === 429) {
       // 免费层每日配额（每模型每天 20 次）用尽时，等秒数无用，提示换模型
       const quotaId = (payload?.error?.details || []).find((item) => item?.["@type"]?.includes("QuotaFailure"))
         ?.violations?.[0]?.quotaId || "";
       if (quotaId.includes("PerDay")) {
-        throw new Error("Gemini 免费额度该模型今日 20 次已用完，请在模型下拉框换一个模型（如 gemini-3.8-flash），或明天再试。");
+        throw new Error("当前 Gemini 模型的今日免费额度已用完。请选择其他有额度的模型，或等待额度重置后重试。");
       }
       lastRetrySeconds = geminiRetrySeconds(result, payload);
       if (attempt === 0 && lastRetrySeconds <= 35) {
@@ -1177,10 +1185,10 @@ async function requestGemini(url, options, timeoutMilliseconds = 120_000) {
       }
       throw new Error(`Gemini 免费额度正在限流，请等待约 ${lastRetrySeconds} 秒后再试。`);
     }
-    if (result.status >= 500 || /high demand|overloaded|temporarily unavailable/i.test(providerMessage)) {
+    if (status >= 500 || /high demand|overloaded|temporarily unavailable/i.test(providerMessage)) {
       serviceWasBusy = true;
       console.error("[gemini service]", JSON.stringify({
-        time: new Date().toISOString(), attempt: attempt + 1, status: result.status
+        time: new Date().toISOString(), attempt: attempt + 1, status
       }));
       if (attempt < maxAttempts - 1) {
         await wait(5_000 * (attempt + 1));
@@ -1188,7 +1196,7 @@ async function requestGemini(url, options, timeoutMilliseconds = 120_000) {
       }
       throw new Error("Gemini 模型当前繁忙，已自动重试 2 次。请稍后重试，或选择其他可用模型。");
     }
-    throw new Error(providerMessage || `Gemini 请求失败（${result.status}）`);
+    throw new Error(providerMessage || `Gemini 请求失败（${status}）`);
   }
   throw new Error(`Gemini 免费额度正在限流，请等待约 ${lastRetrySeconds} 秒后再试。`);
 }

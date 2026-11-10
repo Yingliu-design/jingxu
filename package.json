@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.mjs",
-    "check": "node --check server.mjs && node --check public/app.js && node --check public/api-settings.js && node --check api-config.mjs && node --check storyboard-prompt.mjs && node --check chinese-input.mjs",
-    "test": "node --test chinese-input.test.mjs api-config.test.mjs storyboard-prompt.test.mjs"
+    "check": "node --check server.mjs && node --check public/app.js && node --check public/api-settings.js && node --check api-config.mjs && node --check storyboard-prompt.mjs && node --check chinese-input.mjs && node --check gemini-response.mjs",
+    "test": "node --test chinese-input.test.mjs api-config.test.mjs storyboard-prompt.test.mjs gemini-response.test.mjs"
   },
   "engines": {
     "node": ">=22"
