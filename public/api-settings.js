@@ -12,6 +12,27 @@ export function initApiSettings({ getProvider, onSaved }) {
   const message = document.querySelector("#api-settings-message");
   const save = document.querySelector("#api-settings-save");
   const test = document.querySelector("#api-settings-test");
+  const guide = document.querySelector("#api-config-guide");
+  const guides = {
+    gemini: {
+      create: "登录 Google AI Studio，在 API 密钥页面创建或选择项目，创建并复制密钥。",
+      keyUrl: "https://aistudio.google.com/apikey",
+      docsUrl: "https://ai.google.dev/gemini-api/docs/api-key",
+      note: "上传视频进行分析需要选择 Gemini；服务可用地区和额度以 Google 官方说明为准。"
+    },
+    openai: {
+      create: "登录 OpenAI API 平台，在 API keys 页面创建密钥并复制。若平台要求选择项目，请使用你有权限的项目。",
+      keyUrl: "https://platform.openai.com/api-keys",
+      docsUrl: "https://developers.openai.com/api/docs/quickstart",
+      note: "API 的费用和额度以 OpenAI API 平台账单为准，不等同于聊天订阅。本平台上传视频分析需切换为 Gemini。"
+    },
+    deepseek: {
+      create: "登录 DeepSeek 开放平台，进入 API keys 页面创建并复制密钥。调用前在平台中确认账户余额和可用模型。",
+      keyUrl: "https://platform.deepseek.com/api_keys",
+      docsUrl: "https://api-docs.deepseek.com/",
+      note: "如提示余额不足，请到 DeepSeek 开放平台查看账单并充值。本平台上传视频分析需切换为 Gemini。"
+    }
+  };
   let statuses = {};
   let busy = false;
 
@@ -36,6 +57,11 @@ export function initApiSettings({ getProvider, onSaved }) {
     keyState.textContent = status.configured ? "已配置" : "未配置";
     key.placeholder = status.configured ? "已配置，留空保留" : "填写 API Key";
     removeLabel.hidden = !status.configured;
+    const help = guides[provider.value];
+    document.querySelector("#api-guide-create").textContent = help.create;
+    document.querySelector("#api-guide-key-link").href = help.keyUrl;
+    document.querySelector("#api-guide-docs").href = help.docsUrl;
+    document.querySelector("#api-guide-provider-note").textContent = help.note;
     notify("");
   }
   async function request(path, body) {
@@ -54,6 +80,7 @@ export function initApiSettings({ getProvider, onSaved }) {
   document.querySelectorAll("[data-api-settings]").forEach((button) => button.addEventListener("click", async () => {
     if (dialog.open) return;
     provider.value = getProvider(button.dataset.apiSettings);
+    guide.open = false;
     dialog.showModal();
     clearKey();
     setBusy(true);

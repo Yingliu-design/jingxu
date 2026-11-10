@@ -11,7 +11,21 @@
 .api-settings-dialog fieldset { padding:0; margin:0; border:0; min-width:0; }
 .api-settings-dialog label { font-size:13px; font-weight:600; margin:0 0 8px; display:block; }
 .api-settings-dialog select,.api-settings-dialog input[type="text"],.api-settings-dialog input[type="password"] { width:100%; padding:11px 12px; border:1px solid var(--line-strong); border-radius:5px; background-color:#fff; font:14px "PingFang SC",sans-serif; min-height:44px; }
-.api-settings-dialog select { margin-bottom:22px; padding-right:2.75rem; }
+.api-settings-dialog select { margin-bottom:12px; padding-right:2.75rem; }
+.api-guide { margin-bottom:22px; font-size:12px; line-height:1.8; }
+.api-guide>summary { min-height:0; display:list-item; width:fit-content; padding:2px 0; color:var(--accent-dark); cursor:pointer; }
+.api-guide-content { margin-top:12px; padding:16px 18px; border:1px solid var(--line); border-radius:6px; background:var(--surface); }
+.api-guide-content ol { margin:0; padding-left:20px; }
+.api-guide-content ol>li { padding-left:4px; margin-bottom:14px; }
+.api-guide-content ol>li:last-child { margin-bottom:0; }
+.api-guide-content strong { font-weight:600; }
+.api-guide-content p { margin:5px 0; color:var(--muted); }
+.api-guide-content a { color:var(--accent-dark); text-underline-offset:3px; }
+.api-guide-content .api-guide-provider-note { margin:16px 0 12px; padding-top:12px; border-top:1px solid var(--line); }
+.api-guide-errors>summary { min-height:0; padding:2px 0; cursor:pointer; }
+.api-guide-errors ul { margin:8px 0 12px; padding-left:18px; color:var(--muted); }
+.api-guide-errors li { margin-bottom:8px; }
+.api-guide-docs { display:inline-block; margin-top:10px; }
 .api-key-heading { display:flex; justify-content:space-between; align-items:center; }
 .api-key-heading span { color:var(--muted); font-size:11px; margin-bottom:8px; }
 .api-key-input { display:flex; margin-bottom:22px; border:1px solid var(--line-strong); border-radius:5px; background:white; }

@@ -377,6 +377,19 @@
         <fieldset id="api-settings-fields">
           <label for="api-settings-provider">模型服务商</label>
           <select id="api-settings-provider"><option value="gemini">Google Gemini</option><option value="openai">OpenAI GPT</option><option value="deepseek">DeepSeek</option></select>
+          <details class="api-guide" id="api-config-guide">
+            <summary>配置教程</summary>
+            <div class="api-guide-content">
+              <ol>
+                <li><strong>获取 API Key</strong><p id="api-guide-create">登录 Google AI Studio，在 API 密钥页面创建或选择项目，创建并复制密钥。</p><a id="api-guide-key-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">打开密钥页面 ↗</a></li>
+                <li><strong>回到这里填写</strong><p>把完整密钥粘贴到下方 API Key 输入框。默认模型可先沿用当前值，保存后再从工作区选择账号可用的模型。</p></li>
+                <li><strong>检查并保存</strong><p>点击「检查连接」验证密钥和网络，再点击「保存配置」。看到「配置已保存，立即生效」后即可关闭弹窗开始使用。</p></li>
+              </ol>
+              <p class="api-guide-provider-note" id="api-guide-provider-note">上传视频进行分析需要选择 Gemini；服务可用地区和额度以 Google 官方说明为准。</p>
+              <details class="api-guide-errors"><summary>连接失败怎么办？</summary><ul><li><strong>密钥无效或权限不足：</strong>确认服务商选对、密钥复制完整，并检查 API 项目权限。</li><li><strong>余额、额度不足或请求过多：</strong>查看对应平台的账单和配额，必要时充值或稍后重试。</li><li><strong>模型不可用：</strong>选择该账号模型列表中可用的文本模型。连接检查成功不代表拥有所有模型的调用权限。</li><li><strong>连接超时：</strong>检查本机网络是否能访问对应官方 API 服务；仅能打开官网不代表 API 请求一定可达。</li></ul></details>
+              <a class="api-guide-docs" id="api-guide-docs" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noopener noreferrer">查看官方教程 ↗</a>
+            </div>
+          </details>
           <div class="api-key-heading"><label for="api-settings-key">API Key</label><span id="api-key-state"></span></div>
           <div class="api-key-input"><input type="password" id="api-settings-key" autocomplete="new-password" spellcheck="false" autocapitalize="off" aria-describedby="api-settings-note"><button type="button" id="api-key-toggle" aria-label="显示 API Key" aria-pressed="false">显示</button></div>
           <label for="api-settings-model">默认模型</label>
