@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="镜序 JINGXU，你的 AI 分镜创作工作台。从参考视频、逐镜拆解到任务提示词，让每一份灵感，有序成片。">
+    <meta name="theme-color" content="#184f3d">
+    <link rel="icon" href="/logo.svg" type="image/svg+xml" sizes="any">
+    <title>镜序 JINGXU · 让灵感 有序成片</title>
+    <script>
+      if (window.location.protocol === "file:") {
+        window.location.replace(`http://127.0.0.1:4173/${window.location.hash}`);
+      }
+    </script>
+    <link rel="stylesheet" href="/styles.css?v=20260821-4">
+    <link rel="stylesheet" href="/home.css?v=20261109-1">
+    <script type="module" src="/app.js?v=20261109-1"></script>
+  </head>
+  <body>
+    <a class="file-fallback" href="http://127.0.0.1:4173/">打开正确的网站入口</a>
+    <a class="skip-link" href="#workspace">跳到工作区</a>
+    <header class="topbar">
+      <a class="brand" href="#home" data-open-view="home" aria-label="镜序首页">
+        <img class="brand-mark" src="/logo.svg" alt="" aria-hidden="true">
+        <span class="brand-name">镜序</span>
+      </a>
+      <nav class="tool-nav" aria-label="工具切换">
+        <button class="tool-tab" type="button" data-view="home" aria-selected="true" aria-controls="home-workspace">首页</button>
+        <button class="tool-tab" type="button" data-view="download" aria-selected="false" aria-controls="download-workspace">视频下载</button>
+        <button class="tool-tab" type="button" data-view="text" aria-selected="false" aria-controls="text-workspace">复刻分镜</button>
+        <button class="tool-tab" type="button" data-view="story" aria-selected="false" aria-controls="story-workspace">分镜任务</button>
+      </nav>
+      <button class="home-entry" type="button" data-open-view="text">进入工作台 ↗</button>
+      <div class="connection" id="connection" aria-live="polite">
+        <span class="connection-dot" aria-hidden="true"></span>
+        <span>正在检查模型</span>
+      </div>
+    </header>
+
+    <main id="workspace">
+      <section id="home-workspace" class="home-page" aria-label="镜序平台介绍" hidden>
+        <div class="home-wrap">
+          <section class="home-hero" aria-labelledby="home-title">
+            <div class="home-hero-copy">
+              <h1 id="home-title">让每一份灵感<br><em>有序成片。</em></h1>
+              <p class="home-intro">下载参考视频、拆解镜头、整理任务提示词。<br>让你的故事，更快进入创作。</p>
+              <div class="home-actions">
+                <a class="home-primary" href="#shot-recreation" data-open-view="text">开始创作 <span aria-hidden="true">↗</span></a>
+                <a class="home-secondary" href="#home-workflow">了解创作流程 ↓</a>
+              </div>
+            </div>
+            <div class="home-stage" aria-label="可切换镜头的分镜示例">
+              <div class="demo-window">
+                <div class="demo-top"><i></i><i></i><i></i><span>分镜示例</span></div>
+                <div class="demo-body">
+                  <div class="demo-heading"><strong>一只猫的治愈日常</strong></div>
+                  <div class="demo-scene">
+                    <img id="home-demo-image" src="/assets/story-home.jpg" alt="主人在家中陪伴两只猫咪的短剧示例画面" width="1100" height="619">
+                    <span class="demo-frame-corner" id="home-demo-number">02</span>
+                    <div class="demo-scene-label"><small id="home-demo-type">中景 · 缓缓推进</small><p id="home-demo-caption">回到家，就回到了柔软的世界。</p></div>
+                  </div>
+                  <div class="demo-shots" role="group" aria-label="选择分镜示例">
+                    <button class="demo-shot" type="button" data-demo-shot="0" aria-pressed="false"><img src="/assets/story-morning.jpg" alt="" width="260" height="146"><span>01 / 故事的开始</span></button>
+                    <button class="demo-shot" type="button" data-demo-shot="1" aria-pressed="true"><img src="/assets/story-home.jpg" alt="" width="260" height="146"><span>02 / 温柔的陪伴</span></button>
+                    <button class="demo-shot" type="button" data-demo-shot="2" aria-pressed="false"><img src="/assets/story-home.jpg" alt="" width="260" height="146"><span>03 / 小小的幸福</span></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section id="home-workflow" class="home-features" aria-labelledby="home-workflow-title">
+            <div class="home-section-heading"><h2 id="home-workflow-title">从参考视频，到创作任务</h2></div>
+            <div class="home-feature-grid">
+              <article class="home-feature"><div class="home-feature-top"><span>01</span><b aria-hidden="true">↓</b></div><h3>留住灵感</h3><p>粘贴视频链接，下载参考素材。</p><a href="#video-download" data-open-view="download">视频下载 <span aria-hidden="true">↗</span></a></article>
+              <article class="home-feature"><div class="home-feature-top"><span>02</span><b aria-hidden="true">⌘</b></div><h3>拆解故事</h3><p>上传视频或输入文本，提取分镜并改编故事。</p><a href="#shot-recreation" data-open-view="text">复刻分镜 <span aria-hidden="true">↗</span></a></article>
+              <article class="home-feature"><div class="home-feature-top"><span>03</span><b aria-hidden="true">↗</b></div><h3>准备开镜</h3><p>按时长整理镜头，生成分组任务提示词。</p><a href="#storyboard-tasks" data-open-view="story">分镜任务 <span aria-hidden="true">↗</span></a></article>
+            </div>
+          </section>
+          <section class="home-outro" aria-labelledby="home-outro-title"><h2 id="home-outro-title">下一个故事，从这里开镜。</h2><a class="home-primary" href="#shot-recreation" data-open-view="text">开始创作 <span aria-hidden="true">↗</span></a></section>
+          <footer class="home-footer"><strong>镜序</strong><a href="#home" data-open-view="home">回到顶部 ↑</a></footer>
+        </div>
+      </section>
+      <div id="story-workspace" class="workspace">
+      <section class="composer" aria-label="复刻分镜内容输入">
+        <form id="generator-form">
+          <label for="script">复刻分镜内容</label>
+          <textarea id="script" name="script" rows="18" required aria-describedby="script-help" placeholder="粘贴“复刻分镜”页面生成的内容…"></textarea>
+          <div class="field-meta">
+            <span id="script-help">确认内容后，填写视频秒数并生成分镜任务</span>
+            <span id="shot-count">将生成 30 镜</span>
+          </div>
+          <div id="story-status" class="form-message success-message" role="status" hidden></div>
+
+          <div class="model-controls" aria-label="AI 模型设置">
+            <div class="field">
+              <label for="model-provider">模型服务商</label>
+              <select id="model-provider">
+                <option value="gemini">Google Gemini</option>
+                <option value="openai">OpenAI GPT</option>
+                <option value="deepseek">DeepSeek</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="text-model">文本模型</label>
+              <select id="text-model" aria-describedby="model-note">
+                <option>正在读取可用模型…</option>
+              </select>
+            </div>
+            <p id="model-note" class="model-note">分镜任务生成会使用这里选择的模型。</p>
+          </div>
+
+          <div class="compact-fields">
+            <div class="field">
+              <label for="duration-seconds">视频秒数</label>
+              <input id="duration-seconds" name="durationSeconds" type="number" min="5" max="180" value="60" inputmode="numeric">
+              <div class="duration-presets" role="group" aria-label="常用视频秒数">
+                <button class="duration-preset" type="button" data-seconds="15" aria-pressed="false">15秒</button>
+                <button class="duration-preset" type="button" data-seconds="30" aria-pressed="false">30秒</button>
+                <button class="duration-preset" type="button" data-seconds="60" aria-pressed="true">60秒</button>
+              </div>
+            </div>
+            <div class="field output-estimate" aria-live="polite">
+              <span class="field-label">自动分镜</span>
+              <strong id="shot-estimate">30</strong><span class="estimate-unit">镜</span>
+            </div>
+            <div class="field output-estimate" aria-live="polite">
+              <span class="field-label">每组镜头</span>
+              <strong id="group-estimate">5</strong><span class="estimate-unit">镜</span>
+            </div>
+            <div class="field output-estimate task-count-control">
+              <label for="task-count">任务数，可选</label>
+              <div class="estimate-input-row">
+                <input id="task-count" name="taskCount" type="number" min="1" max="30" inputmode="numeric">
+                <span class="estimate-unit">个</span>
+              </div>
+            </div>
+          </div>
+
+          <details class="advanced">
+            <summary>补充要求</summary>
+            <div class="advanced-body">
+              <label for="requirements">附加到全部任务</label>
+              <textarea id="requirements" name="globalRequirements" rows="4" placeholder="例如：9:16 竖屏，角色外貌必须高度一致，避免暖黄光…"></textarea>
+            </div>
+          </details>
+
+          <div id="form-error" class="form-message error-message" role="alert" hidden></div>
+          <div class="form-actions">
+            <button class="button secondary" id="preview-button" type="button">整理已有分镜</button>
+            <button class="button primary" id="generate-button" type="submit">转成分镜与任务</button>
+          </div>
+          <p class="action-note" id="action-note">粘贴复刻内容，选择视频秒数后生成逐镜脚本和任务提示词。</p>
+        </form>
+      </section>
+
+      <section class="results" aria-labelledby="results-title">
+        <div class="section-heading results-heading">
+          <div>
+            <p class="eyebrow">输出</p>
+            <h2 id="results-title">分镜与任务</h2>
+          </div>
+          <div class="result-actions" id="result-actions" hidden>
+            <button class="text-button" id="copy-all" type="button">复制全部</button>
+            <button class="text-button" id="download-json" type="button">下载 JSON</button>
+          </div>
+        </div>
+
+        <div id="empty-state" class="empty-state">
+          <span class="empty-number">01—30</span>
+          <p>粘贴复刻分镜结果后，生成完整逐镜脚本和每组任务提示词。</p>
+        </div>
+        <div id="loading-state" class="loading-state" hidden aria-live="polite">
+          <div class="loading-line"></div>
+          <div class="loading-line short"></div>
+          <p>正在逐镜核对画面与台词，通常需要几十秒。</p>
+        </div>
+        <div id="result-summary" class="result-summary" hidden aria-live="polite"></div>
+        <section id="storyboard-result" class="storyboard-result" hidden aria-labelledby="storyboard-title">
+          <header class="storyboard-header">
+            <div>
+              <span class="task-index">脚本</span>
+              <h3 id="storyboard-title">完整分镜脚本</h3>
+            </div>
+            <button class="text-button" id="copy-storyboard" type="button">复制分镜</button>
+          </header>
+          <textarea id="storyboard-output" rows="16" aria-label="完整分镜脚本"></textarea>
+        </section>
+        <div id="task-list" class="task-list"></div>
+      </section>
+      </div>
+
+      <section id="text-workspace" class="text-workspace" aria-label="复刻分镜" hidden>
+        <div class="text-generation-layout">
+          <form id="text-generation-form" class="text-input-panel">
+            <div class="field prompt-field">
+              <div class="prompt-field-heading">
+                <label for="text-prompt-select">提示词，可选</label>
+                <details class="prompt-preview">
+                  <summary>查看所选提示词</summary>
+                  <div class="prompt-preview-panel">
+                    <p id="text-prompt-preview">选择后可在这里核对提示词内容。</p>
+                  </div>
+                </details>
+              </div>
+              <select id="text-prompt-select"><option value="">正在读取提示词…</option></select>
+            </div>
+            <div class="text-model-controls">
+              <div class="field">
+                <label for="text-provider">模型服务商</label>
+                <select id="text-provider">
+                  <option value="gemini">Google Gemini</option>
+                  <option value="openai">OpenAI GPT</option>
+                  <option value="deepseek">DeepSeek</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="text-generation-model">文本模型</label>
+                <select id="text-generation-model"><option value="">正在读取模型…</option></select>
+              </div>
+            </div>
+            <div class="field text-video-field">
+              <label for="text-video">参考视频，可选</label>
+              <div class="video-picker">
+                <input id="text-video" type="file" accept="video/mp4,video/mpeg,video/quicktime,video/x-msvideo,video/webm,video/x-flv,video/x-ms-wmv,video/3gpp">
+                <p>支持 MP4、MOV、AVI、WebM 等格式，单个视频不超过 95 MB。选择视频后会自动使用 Gemini 识别画面与声音。</p>
+              </div>
+              <div id="text-video-meta" class="video-file-meta" hidden>
+                <span id="text-video-name"></span>
+                <button id="remove-text-video" class="text-button" type="button">移除</button>
+              </div>
+            </div>
+            <div class="field text-source-field">
+              <label for="text-source">补充文本，可选</label>
+              <textarea id="text-source" rows="7" placeholder="填写人物、重点、输出格式等补充要求；也可以只上传视频…"></textarea>
+            </div>
+            <div id="text-generation-error" class="form-message error-message" role="alert" hidden></div>
+            <div class="text-generation-actions">
+              <button id="text-random-story" class="button secondary" type="button">随机搞笑故事</button>
+              <button id="text-generate-button" class="button primary" type="submit">开始生成</button>
+            </div>
+          </form>
+          <section class="text-output-panel" aria-labelledby="text-output-title">
+            <header>
+              <div>
+                <p class="eyebrow">输出</p>
+                <h2 id="text-output-title">生成结果</h2>
+              </div>
+            </header>
+            <div id="text-output-empty" class="text-output-empty">结果会出现在这里。</div>
+            <div id="text-output-loading" class="loading-state" hidden>
+              <div class="generation-progress-heading">
+                <strong id="text-generation-phase">正在准备生成</strong>
+                <span id="text-generation-percent">预计 0%</span>
+              </div>
+              <div id="text-generation-progressbar" class="generation-progress-track" role="progressbar" aria-label="文本生成预计进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <span id="text-generation-progress-fill"></span>
+              </div>
+              <p id="text-generation-progress-detail">已等待 0 秒，完成后会自动显示结果。</p>
+            </div>
+            <div id="text-result-tabs" class="text-result-tabs" role="tablist" aria-label="结果切换" hidden>
+              <button class="text-result-tab" type="button" role="tab" data-result-view="replica" aria-selected="true">复刻结果</button>
+              <button class="text-result-tab" type="button" role="tab" data-result-view="tasks" aria-selected="false">分镜任务</button>
+            </div>
+            <div id="text-version-tabs" class="text-version-tabs" role="tablist" aria-label="故事版本切换" hidden>
+              <button class="text-version-tab" type="button" role="tab" data-story-version="original" aria-selected="true">原始复刻</button>
+              <button class="text-version-tab" type="button" role="tab" data-story-version="replica" aria-selected="false">换角色结果</button>
+              <button class="text-version-tab" type="button" role="tab" data-story-version="remix" aria-selected="false">二创结果</button>
+            </div>
+            <div id="text-output-meta" class="result-summary" hidden></div>
+            <textarea id="text-output" rows="24" readonly hidden></textarea>
+            <section id="text-task-panel" class="text-task-panel" aria-labelledby="text-task-title" hidden>
+              <header class="text-task-header">
+                <div>
+                  <p class="eyebrow">分镜输出</p>
+                  <h3 id="text-task-title">完整分镜与任务</h3>
+                </div>
+                <button id="copy-text-tasks" class="text-button" type="button">复制全部任务</button>
+              </header>
+              <div id="text-task-summary" class="result-summary"></div>
+              <div class="text-task-storyboard">
+                <div class="storyboard-header">
+                  <h3>完整分镜脚本</h3>
+                  <button id="copy-text-storyboard" class="text-button" type="button">复制分镜</button>
+                </div>
+                <textarea id="text-task-storyboard-output" rows="10" readonly aria-label="复刻结果生成的完整分镜脚本"></textarea>
+              </div>
+              <div id="text-task-list" class="task-list"></div>
+            </section>
+            <div id="text-output-actions" class="text-output-actions" hidden>
+              <div class="cast-options" role="group" aria-label="固定角色选择">
+                <button class="button secondary cast-option" type="button" data-cast-mode="duo" aria-pressed="false">主人 + 布丁</button>
+                <button class="button secondary cast-option" type="button" data-cast-mode="trio" aria-pressed="false">主人 + 布丁 + Coco（配角）</button>
+              </div>
+              <button id="remix-text-output" class="button primary" type="button">二创故事</button>
+              <button id="copy-text-output" class="button secondary icon-button" type="button" aria-label="复制生成结果" title="复制生成结果">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 3h9a4 4 0 0 1 4 4v9a1 1 0 1 1-2 0V7a2 2 0 0 0-2-2H8a1 1 0 1 1 0-2Z"/>
+                  <path d="M7 7h8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a4 4 0 0 1-4-4v-6a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h8a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1H7Z"/>
+                </svg>
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="download-workspace" class="download-workspace" aria-labelledby="download-title" hidden>
+        <div class="download-tool">
+          <header class="download-header">
+            <div>
+              <p class="eyebrow">本地工具</p>
+              <h1 id="download-title">视频下载</h1>
+            </div>
+            <span class="local-badge">本机处理</span>
+          </header>
+          <p class="download-intro">粘贴公开视频的分享文字或链接，完成后直接保存到电脑。仅下载你有权保存和使用的内容。</p>
+          <form id="video-download-form">
+            <label for="video-url">视频链接</label>
+            <textarea id="video-url" rows="5" placeholder="例如：复制抖音分享文字，整段粘贴到这里"></textarea>
+            <div class="download-controls">
+              <div class="field">
+                <label for="video-quality">清晰度</label>
+                <select id="video-quality">
+                  <option value="720">720P</option>
+                  <option value="1080" selected>1080P</option>
+                  <option value="best">最高可用</option>
+                </select>
+              </div>
+              <button class="button primary" id="video-download-button" type="submit">开始下载</button>
+            </div>
+          </form>
+          <div id="video-download-error" class="form-message error-message" role="alert" hidden></div>
+          <div id="video-download-progress" class="download-progress" role="status" aria-live="polite" hidden>
+            <div class="download-progress-heading">
+              <strong id="video-download-phase">正在准备下载</strong>
+              <span id="video-download-percent">0%</span>
+            </div>
+            <div id="video-download-progressbar" class="download-progress-track" role="progressbar" aria-label="视频下载进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span id="video-download-progress-fill"></span>
+            </div>
+            <p id="video-download-detail">正在检查视频链接…</p>
+          </div>
+          <div id="video-download-status" class="download-status" role="status" hidden>
+            <strong id="video-download-name"></strong>
+            <span id="video-download-meta"></span>
+            <button id="video-download-link" class="text-button" type="button">打开文件夹</button>
+          </div>
+          <p class="supported-sites">支持：抖音、B站、YouTube、X、Instagram、TikTok、Facebook、快手、小红书。登录、私密、付费或受保护内容可能无法下载。</p>
+        </div>
+      </section>
+
+    </main>
+
+    <template id="task-template">
+      <article class="task-item">
+        <header class="task-header">
+          <div>
+            <span class="task-index"></span>
+            <h3 class="task-title"></h3>
+          </div>
+          <button class="copy-task text-button" type="button">复制任务</button>
+        </header>
+        <div class="prompt-block">
+          <div class="prompt-label">完整任务提示词</div>
+          <textarea class="task-prompt" rows="14"></textarea>
+        </div>
+      </article>
+    </template>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>
