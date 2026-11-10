@@ -30,4 +30,3 @@ ${dialogueManifest}
 用户故事：
 ${script}`;
 }
-
