@@ -91,6 +91,9 @@ const elements = {
 let currentTasks = [];
 let currentStoryboard = "";
 let currentTitle = "";
+let currentStoryboardInputSignature = "";
+let storyboardRequestId = 0;
+let storyboardRequestController = null;
 let toastTimer;
 let textGenerationProgressTimer;
 let textGenerationStartedAt = 0;
@@ -328,6 +331,7 @@ function saveWorkspaceState() {
       model: elements.textModel.value,
       status: elements.storyStatus.hidden ? "" : elements.storyStatus.textContent,
       result: currentStoryboard ? {
+        inputSignature: currentStoryboardInputSignature,
         title: currentTitle,
         storyboard: currentStoryboard,
         tasks: currentTasks,
@@ -485,7 +489,7 @@ async function openVideoDownloadsFolder() {
 function setLoading(loading, isPreview = false) {
   elements.generate.disabled = loading;
   elements.preview.disabled = loading;
-  elements.empty.hidden = true;
+  elements.empty.hidden = loading || Boolean(currentStoryboard) || currentTasks.length > 0;
   elements.loading.hidden = !loading;
   elements.taskList.hidden = loading;
   elements.storyboardResult.hidden = loading || !currentStoryboard;
@@ -568,7 +572,35 @@ function renderTasks(tasks, meta) {
   elements.taskList.hidden = false;
 }
 
-function renderResult(data) {
+function storyboardInputSignature() {
+  return JSON.stringify({
+    script: elements.script.value.trim(),
+    durationSeconds: Number(elements.durationSeconds.value),
+    taskCount: Number(elements.taskCount.value) || 0,
+    globalRequirements: elements.requirements.value.trim()
+  });
+}
+
+function clearStoryResult(message = "当前内容尚未生成分镜与任务。") {
+  storyboardRequestId += 1;
+  storyboardRequestController?.abort();
+  storyboardRequestController = null;
+  currentStoryboard = "";
+  currentStoryboardInputSignature = "";
+  currentTitle = "";
+  currentTasks = [];
+  elements.storyboardOutput.value = "";
+  elements.taskList.replaceChildren();
+  elements.summary.textContent = "";
+  elements.storyStatus.textContent = "";
+  elements.storyStatus.hidden = true;
+  elements.error.hidden = true;
+  elements.empty.querySelector("p").textContent = message;
+  setLoading(false);
+}
+
+function renderResult(data, inputSignature) {
+  currentStoryboardInputSignature = inputSignature;
   currentStoryboard = data.storyboardMarkdown;
   currentTitle = data.title;
   elements.storyboardOutput.value = currentStoryboard;
@@ -587,7 +619,10 @@ function renderResult(data) {
 }
 
 async function requestTasks(path) {
-  elements.error.hidden = true;
+  clearStoryResult();
+  const requestId = storyboardRequestId;
+  const inputSignature = storyboardInputSignature();
+  saveWorkspaceState();
   const rawTaskCount = elements.taskCount.value.trim();
   const taskCount = rawTaskCount ? Number(rawTaskCount) : 0;
   if (rawTaskCount && (!Number.isInteger(taskCount) || taskCount < 1 || taskCount > 30)) {
@@ -604,10 +639,13 @@ async function requestTasks(path) {
     return false;
   }
   const isPreview = path === "/api/preview";
+  const controller = new AbortController();
+  storyboardRequestController = controller;
   setLoading(true, isPreview);
   try {
     const response = await fetch(path, {
       method: "POST",
+      signal: controller.signal,
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         script: elements.script.value,
@@ -619,16 +657,22 @@ async function requestTasks(path) {
       })
     });
     const data = await response.json();
+    if (requestId !== storyboardRequestId || inputSignature !== storyboardInputSignature()) return false;
     if (!response.ok) throw new Error(data.error || "生成失败，请稍后重试。");
-    renderResult(data);
+    renderResult(data, inputSignature);
     return true;
   } catch (error) {
+    if (requestId !== storyboardRequestId || error.name === "AbortError") return false;
     elements.error.textContent = error.message;
     elements.error.hidden = false;
-    elements.empty.hidden = currentTasks.length > 0;
+    elements.empty.querySelector("p").textContent = "本次生成失败，尚未生成与当前内容对应的分镜。请重试。";
+    saveWorkspaceState();
     return false;
   } finally {
-    setLoading(false);
+    if (requestId === storyboardRequestId) {
+      storyboardRequestController = null;
+      setLoading(false);
+    }
   }
 }
 
@@ -648,6 +692,7 @@ async function requestRandomStory() {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "故事生成失败，请再试一次。");
+    clearStoryResult();
     elements.script.value = data.story;
     const providerName = providerNames[data.provider] || data.provider;
     elements.storyStatus.textContent = `《${data.title}》已生成｜${providerName} · ${data.model}｜本集角色：${data.cast}。你可以直接修改，满意后点击“转成分镜与任务”。`;
@@ -1073,11 +1118,13 @@ function restoreWorkspaceState() {
   if (story.provider && elements.modelProvider.querySelector(`option[value="${story.provider}"]`)) {
     elements.modelProvider.value = story.provider;
   }
-  if (story.status) {
+  const matchingStoryResult = story.result?.inputSignature === storyboardInputSignature();
+  if (story.status && matchingStoryResult) {
     elements.storyStatus.textContent = story.status;
     elements.storyStatus.hidden = false;
   }
-  if (story.result?.storyboard && Array.isArray(story.result.tasks)) {
+  if (matchingStoryResult && story.result?.storyboard && Array.isArray(story.result.tasks)) {
+    currentStoryboardInputSignature = story.result.inputSignature;
     currentTitle = story.result.title || "";
     currentStoryboard = story.result.storyboard;
     currentTasks = story.result.tasks;
@@ -1135,21 +1182,28 @@ elements.textModel.addEventListener("change", () => {
   queueWorkspaceSave();
 });
 elements.script.addEventListener("input", () => {
+  clearStoryResult("内容已更新，请重新生成分镜与任务。");
   updateEstimate();
   queueWorkspaceSave();
 });
 elements.durationSeconds.addEventListener("input", () => {
+  clearStoryResult("时长已更新，请重新生成分镜与任务。");
   updateEstimate();
   queueWorkspaceSave();
 });
 elements.taskCount.addEventListener("input", () => {
+  clearStoryResult("任务数量已更新，请重新生成分镜与任务。");
   updateEstimate();
   queueWorkspaceSave();
 });
-elements.requirements.addEventListener("input", queueWorkspaceSave);
+elements.requirements.addEventListener("input", () => {
+  clearStoryResult("补充要求已更新，请重新生成分镜与任务。");
+  queueWorkspaceSave();
+});
 elements.durationPresets.forEach((button) => {
   button.addEventListener("click", () => {
     elements.durationSeconds.value = button.dataset.seconds;
+    clearStoryResult("时长已更新，请重新生成分镜与任务。");
     updateEstimate();
     queueWorkspaceSave();
   });
@@ -1221,6 +1275,8 @@ document.querySelectorAll("[data-sequence-frame]").forEach((button) => {
     document.querySelector(".sequence-art").dataset.frame = button.dataset.sequenceFrame;
     document.querySelectorAll("[data-sequence-frame]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
     const index = Number(button.dataset.sequenceFrame);
+    document.querySelector(".shot-current-label").textContent = ["01 / 灵感", "02 / 分镜", "03 / 成片"][index];
+    document.querySelector(".shot-timecode").textContent = ["00:00:00", "00:00:08", "00:00:16"][index];
     document.querySelector(".sequence-track").style.setProperty("--sequence-progress", `${index * 50}%`);
   });
 });
