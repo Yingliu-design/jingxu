@@ -1221,7 +1221,6 @@ document.querySelectorAll("[data-sequence-frame]").forEach((button) => {
     document.querySelector(".sequence-art").dataset.frame = button.dataset.sequenceFrame;
     document.querySelectorAll("[data-sequence-frame]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
     const index = Number(button.dataset.sequenceFrame);
-    document.querySelector(".sequence-timecode").textContent = `00:00:0${index + 1}`;
     document.querySelector(".sequence-track").style.setProperty("--sequence-progress", `${index * 50}%`);
   });
 });
