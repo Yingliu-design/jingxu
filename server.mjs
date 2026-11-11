@@ -17,7 +17,7 @@ import { basename, extname, join, normalize } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
-import { needsTranslation, translateInput } from "./chinese-input.mjs";
+import { needsTranslation, translateStoryboardToChinese } from "./chinese-input.mjs";
 import { createApiConfigStore, validateSettingsRequest } from "./api-config.mjs";
 import { buildStoryboardPrompt } from "./storyboard-prompt.mjs";
 import { mergeGeminiResponse } from "./gemini-response.mjs";
@@ -1592,30 +1592,24 @@ const server = createServer(async (request, response) => {
     }
     if (request.method === "POST" && (request.url === "/api/generate" || request.url === "/api/preview")) {
       const body = await readJson(request);
-      let input = validateInput(body);
+      const input = validateInput(body);
       const isPreview = request.url === "/api/preview";
       if (isPreview && !input.shots.length) {
         throw new Error("本地预览只能整理已有分镜表格。输入故事后请点击“生成分镜与任务”。");
       }
       let selection = !input.shots.length ? validateModelSelection(body) : null;
-      if (!input.shots.length && needsTranslation(input.script)) {
-        const script = await translateInput(input.script, (prompt, schema, name) => {
-          selection ||= validateModelSelection(body);
-          return requestModelJson(selection, prompt, schema, name);
-        }, {
-          strict: false,
-          onWarning: warning => {
-            console.error("[translation incomplete]", JSON.stringify({ time: new Date().toISOString(), ...warning }));
-          }
-        });
-        input = validateInput({ ...body, script });
-      }
-      const generated = input.shots.length
+      const draft = input.shots.length
         ? {
           title: "已有分镜", shots: input.shots,
           chineseOnly: input.shots.every(shot => !needsTranslation(`${shot.visual} ${shot.dialogue}`))
         }
         : await generateStoryboardWithModel(input, selection);
+      const generated = await translateStoryboardToChinese(draft, (prompt, schema, name) => {
+        selection ||= validateModelSelection(body);
+        return requestModelJson(selection, prompt, schema, name);
+      }, {
+        onDiagnostic: summary => console.error('[translation retry]', JSON.stringify(summary))
+      });
       const tasks = organizeTasks({ shots: generated.shots, taskCount: input.taskCount });
       return sendJson(response, 200, {
         title: generated.title,
@@ -1629,10 +1623,8 @@ const server = createServer(async (request, response) => {
           model: selection?.model || null,
           dialogueLockCount: generated.dialogueLockCount || 0,
           chineseOnly: Boolean(generated.chineseOnly),
+          translatedToChinese: generated.translatedToChinese,
           warnings: [
-            ...(!generated.chineseOnly ? [input.shots.length
-              ? "已有分镜已按原文整理，英文提示词已保留；未调用翻译服务。"
-              : "部分英文未完成翻译，已保留原文；分镜与任务已生成。"] : []),
             ...(generated.dialoguePlacementNeedsReview ? ["已按原文顺序补回全部台词，请核对台词与画面的对应位置。"] : [])
           ],
           losslessFormat: Boolean(generated.losslessFormat),

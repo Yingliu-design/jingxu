@@ -1,4 +1,5 @@
 import { initApiSettings } from "./api-settings.js";
+import { prepareStoryboardRequest, rememberChineseStoryboard, parseTranslationResponse, translationPromptId } from "./prepare-storyboard-request.js?v=20261111-6";
 
 const elements = {
   toolTabs: [...document.querySelectorAll(".tool-tab")],
@@ -566,7 +567,7 @@ async function loadPrompts() {
     const response = await fetch("/api/prompts");
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "提示词读取失败。");
-    promptLibrary = data.prompts || [];
+    promptLibrary = (data.prompts || []).filter(item => !item.internal);
     promptsLoaded = true;
     elements.textPromptSelect.replaceChildren(new Option("不使用预设提示词（系统默认分析）", ""));
     promptLibrary.forEach((item) => elements.textPromptSelect.append(new Option(`[${item.category}] ${item.title}`, item.id)));
@@ -603,7 +604,8 @@ function renderTasks(tasks, meta) {
   const providerName = providerNames[meta.provider] || meta.provider;
   const mode = meta.mode === "story"
     ? `内容已生成分镜 · ${providerName} · ${meta.model}`
-    : meta.mode === "preview" ? "本地无损整理" : "已有分镜已整理";
+    : meta.translatedToChinese ? "已有分镜已转为中文"
+      : meta.mode === "preview" ? "本地无损整理" : "已有分镜已整理";
   const timing = meta.timingPlan;
   elements.summary.textContent = `${mode}｜${timing.durationSeconds} 秒｜${meta.shotCount} 镜｜每组 ${timing.shotsPerTask} 镜｜${meta.taskCount} 个任务`;
   elements.summary.hidden = false;
@@ -638,7 +640,15 @@ function clearStoryResult(message = "当前内容尚未生成分镜与任务。"
   setLoading(false);
 }
 
+function assertChineseStoryboard(data) {
+  const text = [data.title || "", data.storyboardMarkdown || "", ...(data.tasks || []).map(task => task.prompt || "")].join("\n");
+  if (!data.meta?.chineseOnly || /[a-z]/i.test(text)) {
+    throw new Error("结果尚未全部转为中文。请重启后台后重新整理，原稿已保留。");
+  }
+}
+
 function renderResult(data, inputSignature) {
+  assertChineseStoryboard(data);
   currentStoryboardInputSignature = inputSignature;
   currentStoryboard = data.storyboardMarkdown;
   currentTitle = data.title;
@@ -647,7 +657,9 @@ function renderResult(data, inputSignature) {
   renderTasks(data.tasks, data.meta);
   if (data.meta.mode === "story") {
     const dialogueNote = data.meta.dialogueLockCount
-      ? `；已逐字锁定 ${data.meta.dialogueLockCount} 句原台词`
+      ? data.meta.translatedToChinese
+        ? `；已保留 ${data.meta.dialogueLockCount} 句原台词的中文内容，并翻译英文部分`
+        : `；已逐字锁定 ${data.meta.dialogueLockCount} 句原台词`
       : "";
     const languageNote = data.meta.chineseOnly ? "；分镜与任务已校验为全中文" : "";
     const formatNote = data.meta.losslessFormat ? "；已按原分镜顺序无损换格式" : "";
@@ -657,6 +669,11 @@ function renderResult(data, inputSignature) {
   if (data.meta.warnings?.length) {
     const status = elements.storyStatus.hidden ? "" : elements.storyStatus.textContent;
     elements.storyStatus.textContent = [status, ...data.meta.warnings].filter(Boolean).join(" ");
+    elements.storyStatus.hidden = false;
+  }
+  if (data.meta.mode !== "story" && data.meta.chineseOnly) {
+    const status = elements.storyStatus.hidden ? "" : elements.storyStatus.textContent;
+    elements.storyStatus.textContent = [status, "分镜与任务已校验为全中文；原中文、镜头顺序和任务分组保持不变。"].filter(Boolean).join(" ");
     elements.storyStatus.hidden = false;
   }
   saveWorkspaceState();
@@ -687,22 +704,36 @@ async function requestTasks(path) {
   storyboardRequestController = controller;
   setLoading(true, isPreview);
   try {
+    const selection = { provider: elements.modelProvider.value, model: elements.textModel.value };
+    const prepared = await prepareStoryboardRequest(elements.script.value, async prompt => {
+      storyboardExpectedSeconds = Math.max(storyboardExpectedSeconds, 30);
+      updateStoryboardProgress(15, "正在将画面提示词和配音转为中文");
+      const response = await fetch('/api/text-generate', {
+        method: 'POST', signal: controller.signal,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ input: prompt, promptId: translationPromptId, ...selection })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || '翻译请求失败，请重试。');
+      return parseTranslationResponse(data.text);
+    });
+    if (requestId !== storyboardRequestId || inputSignature !== storyboardInputSignature()) return false;
     const response = await fetch(path, {
       method: "POST",
       signal: controller.signal,
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        script: elements.script.value,
+        script: prepared.script,
         durationSeconds: Number(elements.durationSeconds.value),
         taskCount: taskCount || undefined,
         globalRequirements: elements.requirements.value,
-        provider: elements.modelProvider.value,
-        model: elements.textModel.value
+        ...selection
       })
     });
     const data = await response.json();
     if (requestId !== storyboardRequestId || inputSignature !== storyboardInputSignature()) return false;
     if (!response.ok) throw new Error(data.error || "生成失败，请稍后重试。");
+    data.meta.translatedToChinese ||= prepared.translated;
     renderResult(data, inputSignature);
     stopStoryboardProgress();
     updateStoryboardProgress(100, "生成完成");
@@ -886,6 +917,7 @@ function resetTextTaskResult() {
 }
 
 function renderTextTaskResult(data) {
+  assertChineseStoryboard(data);
   currentTextTasks = data.tasks;
   currentTextStoryboard = data.storyboardMarkdown;
   elements.textTaskStoryboardOutput.value = currentTextStoryboard;
@@ -1165,7 +1197,11 @@ function restoreWorkspaceState() {
   if (story.provider && elements.modelProvider.querySelector(`option[value="${story.provider}"]`)) {
     elements.modelProvider.value = story.provider;
   }
-  const matchingStoryResult = story.result?.inputSignature === storyboardInputSignature();
+  const savedStoryHasEnglish = /[a-z]/i.test([story.result?.title || "", story.result?.storyboard || "", ...(story.result?.tasks || []).map(task => task.prompt)].join("\n"));
+  const matchingStoryResult = !savedStoryHasEnglish && story.result?.inputSignature === storyboardInputSignature();
+  if (savedStoryHasEnglish) {
+    elements.empty.querySelector("p").textContent = "上次的结果含有英文，请重新整理为中文。原稿已保留。";
+  }
   if (story.status && matchingStoryResult) {
     elements.storyStatus.textContent = story.status;
     elements.storyStatus.hidden = false;
@@ -1174,6 +1210,7 @@ function restoreWorkspaceState() {
     currentStoryboardInputSignature = story.result.inputSignature;
     currentTitle = story.result.title || "";
     currentStoryboard = story.result.storyboard;
+    rememberChineseStoryboard(story.script || "", currentStoryboard);
     currentTasks = story.result.tasks;
     elements.storyboardOutput.value = currentStoryboard;
     renderTaskItems(elements.taskList, currentTasks);
@@ -1202,7 +1239,8 @@ function restoreWorkspaceState() {
     elements.textOutputLoading.hidden = true;
     selectStoryVersion(currentStoryVersion, { sync: false });
   }
-  if (text.taskResult?.storyboard && Array.isArray(text.taskResult.tasks)) {
+  const savedTextTasksHaveEnglish = /[a-z]/i.test([text.taskResult?.storyboard || "", ...(text.taskResult?.tasks || []).map(task => task.prompt)].join("\n"));
+  if (!savedTextTasksHaveEnglish && text.taskResult?.storyboard && Array.isArray(text.taskResult.tasks)) {
     currentTextStoryboard = text.taskResult.storyboard;
     currentTextTasks = text.taskResult.tasks;
     elements.textTaskStoryboardOutput.value = currentTextStoryboard;

@@ -1,4 +1,5 @@
-// Run the real API handler without a listening socket; deny every AI/network call.
+// Verify already-Chinese tables without model calls. Bilingual API regression
+// coverage (including translation and failures) lives in api-generation.test.mjs.
 // Usage: node --experimental-vm-modules scripts/verify-markdown.mjs < original.txt
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
@@ -7,9 +8,11 @@ import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {extractMarkdownShots} from '../markdown-shots.mjs';
+import {needsTranslation} from '../chinese-input.mjs';
 const original = await new Promise(resolve=>{let s='';process.stdin.setEncoding('utf8');process.stdin.on('data',c=>s+=c);process.stdin.on('end',()=>resolve(s));});
 const shots=extractMarkdownShots(original);
 assert.ok(shots.length>0,'原稿未被识别为表格');
+assert.ok(shots.every(shot=>!needsTranslation(shot.visual+' '+shot.dialogue)), '此工具仅验证纯中文原稿；中英表格请运行 npm test 中的全中文接口测试。');
 const serverUrl=new URL('../server.mjs',import.meta.url);
 const require=createRequire(serverUrl);
 let handler, aiCalls=0;
