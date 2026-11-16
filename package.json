@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.mjs",
-    "check": "node --check server.mjs && node --check public/app.js && node --check public/api-settings.js && node --check api-config.mjs && node --check storyboard-prompt.mjs && node --check chinese-input.mjs && node --check gemini-response.mjs && node --check dialogue-placement.mjs && node --check markdown-shots.mjs && node --check public/chinese-input.js && node --check public/markdown-shots.js && node --check public/prepare-storyboard-request.js",
-    "test": "node --experimental-vm-modules --test chinese-input.test.mjs api-config.test.mjs storyboard-prompt.test.mjs gemini-response.test.mjs dialogue-placement.test.mjs markdown-shots.test.mjs api-generation.test.mjs prepare-storyboard-request.test.mjs"
+    "check": "node --check server.mjs && node --check public/app.js && node --check public/api-settings.js && node --check api-config.mjs && node --check storyboard-prompt.mjs && node --check chinese-input.mjs && node --check gemini-response.mjs && node --check dialogue-placement.mjs && node --check markdown-shots.mjs && node --check public/chinese-input.js && node --check public/markdown-shots.js && node --check public/prepare-storyboard-request.js && node --check video-download.mjs && node --check public/video-links.js",
+    "test": "node --experimental-vm-modules --test chinese-input.test.mjs api-config.test.mjs storyboard-prompt.test.mjs gemini-response.test.mjs dialogue-placement.test.mjs markdown-shots.test.mjs api-generation.test.mjs prepare-storyboard-request.test.mjs video-download.test.mjs"
   },
   "engines": {
     "node": ">=22"

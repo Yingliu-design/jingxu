@@ -1,3 +1,4 @@
+import { extractVideoUrl, hostMatches } from "./video-links.js?v=20261116-1";
 import { initApiSettings } from "./api-settings.js";
 import { prepareStoryboardRequest, rememberChineseStoryboard, parseTranslationResponse, translationPromptId } from "./prepare-storyboard-request.js?v=20261111-6";
 
@@ -444,7 +445,7 @@ async function requestVideoDownload(event) {
     try {
       data = await startVideoDownload(url, quality);
     } catch (error) {
-      const isXiaohongshu = /https?:\/\/(?:[a-z0-9-]+\.)*xiaohongshu\.com(?:[/?#]|$)/i.test(url);
+      const isXiaohongshu = hostMatches(new URL(extractVideoUrl(url)).hostname, ["xiaohongshu.com", "xhslink.com", "xhslink.cn"]);
       const missingFormat = /清晰度|格式|该视频可能已删除/.test(error.message);
       // 兼容仍在运行的旧下载服务：其高度筛选会排除竖屏视频。
       if (!isXiaohongshu || quality === "best" || !missingFormat) throw error;

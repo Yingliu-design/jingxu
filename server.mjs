@@ -23,6 +23,7 @@ import { buildStoryboardPrompt } from "./storyboard-prompt.mjs";
 import { mergeGeminiResponse } from "./gemini-response.mjs";
 import { restoreOriginalDialogues } from "./dialogue-placement.mjs";
 import { extractMarkdownShots } from "./markdown-shots.mjs";
+import { extractVideoUrl, hostMatches, resolveVideoUrl, downloaderError, downloadWithRetries, findChromePath } from "./video-download.mjs";
 
 const root = fileURLToPath(new URL("./public", import.meta.url));
 const downloadsDir = fileURLToPath(new URL("./downloads", import.meta.url));
@@ -37,11 +38,6 @@ const ffmpegPath = process.env.FFMPEG_PATH || "ffmpeg";
 const cobaltApiUrl = process.env.COBALT_API_URL || "http://127.0.0.1:9000/";
 const downloadFiles = new Map();
 const downloadJobs = new Map();
-const allowedVideoHosts = [
-  "youtube.com", "youtu.be", "douyin.com", "iesdouyin.com", "bilibili.com", "b23.tv",
-  "x.com", "twitter.com", "instagram.com", "tiktok.com", "facebook.com", "fb.watch",
-  "kuaishou.com", "kwai.com", "xiaohongshu.com", "xhslink.com", "xhslink.cn"
-];
 const supportedVideoMimeTypes = new Set([
   "video/mp4", "video/mpeg", "video/quicktime", "video/x-msvideo", "video/webm",
   "video/x-flv", "video/x-ms-wmv", "video/3gpp"
@@ -446,24 +442,6 @@ function validateModelSelection(body) {
   return { provider, model: selectedModel };
 }
 
-function extractVideoUrl(value) {
-  const text = typeof value === "string" ? value.trim() : "";
-  const match = text.match(/https?:\/\/[^\s]+/i);
-  if (!match) throw new Error("请粘贴包含 http 或 https 的公开视频链接。");
-  const cleaned = match[0].replace(/[）)\]】>，,。.!！?？;；'\"]+$/g, "");
-  let url;
-  try {
-    url = new URL(cleaned);
-  } catch {
-    throw new Error("没有识别到有效的视频链接。");
-  }
-  if (url.username || url.password) throw new Error("链接中不能包含账号或密码。");
-  const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
-  const allowed = allowedVideoHosts.some((host) => hostname === host || hostname.endsWith(`.${host}`));
-  if (!allowed) throw new Error("暂时支持抖音、B站、YouTube、X、Instagram、TikTok、Facebook、快手和小红书的公开视频链接。");
-  return url.href;
-}
-
 function runDownloader(args, report = () => {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(ytDlpPath, args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -499,38 +477,15 @@ function runDownloader(args, report = () => {}) {
     });
     child.on("error", () => {
       clearTimeout(timer);
-      reject(new Error("本地视频下载工具无法启动。"));
+      reject(Object.assign(new Error("本地视频下载工具无法启动，请安装 yt-dlp 或检查 YTDLP_PATH 配置。"), { code: "DEPENDENCY" }));
     });
     child.on("close", (code) => {
       clearTimeout(timer);
       if (code === 0) return resolve({ stdout, stderr });
       const log = `${stdout}\n${stderr}`;
-      if (/requested format (?:is )?not available|no video formats found/i.test(log)) {
-        return reject(new Error("该视频没有符合所选清晰度的可用格式，请选择“最高可用”重试。"));
-      }
-      if (/failed to parse json[\s\S]*fresh cookies/i.test(log)) {
-        return reject(new Error("浏览器登录状态正常，但抖音当前阻止了下载器读取视频数据。请先在浏览器打开该视频，再使用浏览器辅助下载。"));
-      }
-      if (/login|cookies|sign in|authentication|账号|登录/i.test(log)) {
-        return reject(new Error("该视频需要登录或账号权限；后台已尝试读取 Chrome 登录状态，但未获得可用权限。"));
-      }
-      if (/private|not available|unavailable|removed|copyright|私密|不可用/i.test(log)) {
-        return reject(new Error("该视频可能已删除、设为私密、受地区或版权限制，无法下载。"));
-      }
-      if (/unsupported url|no suitable extractor/i.test(log)) {
-        return reject(new Error("暂时无法解析这个链接，可能是平台页面结构已经变化。"));
-      }
-      if (/larger than max-filesize|maximum file size/i.test(log)) {
-        return reject(new Error("视频文件超过 1 GB，已停止下载。"));
-      }
-      reject(new Error("视频下载失败。请确认链接能公开播放后再试。"));
+      reject(downloaderError(log));
     });
   });
-}
-
-function hostMatches(hostname, hosts) {
-  const normalizedHost = hostname.toLowerCase().replace(/^www\./, "");
-  return hosts.some((host) => normalizedHost === host || normalizedHost.endsWith(`.${host}`));
 }
 
 function safeMediaFilename(value, fallback = "video.mp4") {
@@ -553,7 +508,7 @@ async function saveRemoteMedia(mediaUrl, filePath, onProgress = () => {}) {
   const response = await fetch(target, {
     headers: isLocalCobalt ? {} : { referer: "https://www.douyin.com/", "user-agent": mobileDouyinUserAgent },
     signal: AbortSignal.timeout(10 * 60 * 1000)
-  });
+  }).catch(() => { throw new Error("无法连接视频文件，请稍后重试。"); });
   if (!response.ok || !response.body) throw new Error(`备用引擎下载失败（${response.status}）。`);
   const declaredSize = Number(response.headers.get("content-length") || response.headers.get("estimated-content-length") || 0);
   if (declaredSize > 1024 * 1024 * 1024) throw new Error("视频文件超过 1 GB，已停止下载。");
@@ -579,7 +534,7 @@ async function saveRemoteMedia(mediaUrl, filePath, onProgress = () => {}) {
     await rename(partPath, filePath);
   } catch (error) {
     await rm(partPath, { force: true });
-    throw error;
+    throw new Error(error.message.includes("1 GB") ? error.message : "视频传输中断，本次未保存残缺文件，请重试。");
   }
 }
 
@@ -603,24 +558,19 @@ function findAwemeItem(routerData, awemeId) {
 
 async function downloadViaDouyinChrome(url, quality, prefix, report = () => {}) {
   report({ phase: "正在用浏览器解析", detail: "识别抖音视频地址…", percent: 18 });
-  const redirectResponse = await fetch(url, {
-    redirect: "follow",
-    headers: { "user-agent": mobileDouyinUserAgent, accept: "text/html" },
-    signal: AbortSignal.timeout(30_000)
-  });
-  const longUrl = redirectResponse.url || url;
+  const longUrl = await resolveVideoUrl(url);
   const idMatch = longUrl.match(/\/(?:video|note|slides)\/(\d+)/) || longUrl.match(/[?&](?:aweme_id|modal_id|item_ids)=(\d+)/);
   if (!idMatch) throw new Error("无法从抖音链接中识别视频编号。");
   const awemeId = idMatch[1];
 
   const puppeteer = await import("puppeteer-core");
-  const chromePath = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  const chromePath = await findChromePath(process.env.CHROME_PATH);
   const browser = await puppeteer.default.launch({
     headless: true,
     executablePath: chromePath,
     timeout: 30_000,
     args: ["--no-sandbox", "--disable-blink-features=AutomationControlled", "--disable-extensions"]
-  });
+  }).catch(() => { throw new Error("无法启动浏览器辅助下载，请检查 Chrome 安装和 CHROME_PATH 配置。"); });
 
   try {
     const page = await browser.newPage();
@@ -629,13 +579,29 @@ async function downloadViaDouyinChrome(url, quality, prefix, report = () => {}) 
 
     // 先访问 note 再访问 video，可让真实 Chrome 完成抖音 WAF 挑战并保留会话。
     // 该策略参考 MIT 开源项目 xlongDev/shiying 的浏览器兜底思路。
-    for (const kind of ["note", "video"]) {
+    for (const kind of ["note", "video", "video"]) {
       report({ phase: "正在用浏览器解析", detail: "读取视频页面…", percent: kind === "note" ? 22 : 28 });
       await page.goto(`https://www.iesdouyin.com/share/${kind}/${awemeId}/`, {
         waitUntil: "domcontentloaded",
-        timeout: 30_000
-      });
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+        timeout: 15_000
+      }).catch(() => null);
+      // The share page can render before videoInfoRes arrives. Wait for this
+      // video's actual media data instead of failing after a fixed 2.5 seconds.
+      if (kind === "note") {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+      } else {
+        await page.waitForFunction((id) => {
+          const queue = [window._ROUTER_DATA];
+          let visited = 0;
+          while (queue.length && visited++ < 100_000) {
+            const value = queue.shift();
+            if (!value || typeof value !== "object") continue;
+            if (String(value.aweme_id ?? value.awemeId ?? "") === id && value.video?.play_addr) return true;
+            for (const nested of Object.values(value)) if (nested && typeof nested === "object") queue.push(nested);
+          }
+          return false;
+        }, { timeout: 12_000, polling: 250 }, awemeId).catch(() => {});
+      }
       const rawRouterData = await page.evaluate(() => {
         const pageWindow = window;
         if (pageWindow._ROUTER_DATA) return JSON.stringify(pageWindow._ROUTER_DATA);
@@ -696,7 +662,7 @@ async function downloadViaCobalt(url, quality, prefix, report = () => {}) {
       localProcessing: "disabled"
     }),
     signal: AbortSignal.timeout(60_000)
-  });
+  }).catch(() => { throw new Error("本机备用下载引擎尚未启动或无法连接。"); });
   if (!response.ok) throw new Error(`免费备用引擎暂时不可用（${response.status}）。`);
   const result = await response.json();
   let mediaUrl;
@@ -731,45 +697,44 @@ async function downloadViaCobalt(url, quality, prefix, report = () => {}) {
 
 async function downloadVideo(body, report = () => {}) {
   report({ phase: "正在解析链接", detail: "检查平台与清晰度…", percent: 5 });
-  const url = extractVideoUrl(body.url);
+  const url = await resolveVideoUrl(body.url);
   const hostname = new URL(url).hostname.toLowerCase();
-  const browserCookieArgs = /(^|\.)douyin\.com$/.test(hostname) || /(^|\.)iesdouyin\.com$/.test(hostname)
-    ? ["--cookies-from-browser", "chrome"]
-    : [];
   const quality = ["720", "1080", "best"].includes(body.quality) ? body.quality : "1080";
-  // res 按短边计算清晰度，720×1560 的竖屏视频也属于 720P。
-  // 优先所选清晰度；源站只提供更高画质时仍保留可下载的格式。
-  const formatSortArgs = quality === "best" ? [] : ["--format-sort", `res:${quality}`];
   const jobId = randomUUID();
   const prefix = `${jobId}-`;
   await mkdir(downloadsDir, { recursive: true });
   try {
     report({ phase: "正在连接视频源", detail: "获取视频信息…", percent: 8 });
-    await runDownloader([
-      "--no-config",
-      "--no-playlist",
-      "--newline",
-      "--max-filesize", "1G",
-      "--socket-timeout", "20",
-      "--retries", "2",
-      "--fragment-retries", "2",
-      ...browserCookieArgs,
-      "--ffmpeg-location", ffmpegPath,
-      "--format", "bv*+ba/b",
-      ...formatSortArgs,
-      "--merge-output-format", "mp4",
-      "--remux-video", "mp4",
-      "--output", join(downloadsDir, `${prefix}%(title).50s-%(id)s.%(ext)s`),
-      url
-    ], report);
+    await downloadWithRetries({
+      url, quality, cookieBrowser: process.env.VIDEO_COOKIE_BROWSER || "", report,
+      run: ({ url, quality: selectedQuality, cookieBrowser }) => runDownloader([
+        "--no-config",
+        "--no-playlist",
+        "--newline",
+        "--max-filesize", "1G",
+        "--socket-timeout", "20",
+        "--retries", "2",
+        "--fragment-retries", "2",
+        ...(cookieBrowser ? ["--cookies-from-browser", cookieBrowser] : []),
+        "--ffmpeg-location", ffmpegPath,
+        "--format", "bv*+ba/b",
+        // res uses the shorter edge, so portrait sources remain downloadable.
+        ...(selectedQuality === "best" ? [] : ["--format-sort", `res:${selectedQuality}`]),
+        "--merge-output-format", "mp4",
+        "--remux-video", "mp4",
+        "--output", join(downloadsDir, `${prefix}%(title).50s-%(id)s.%(ext)s`),
+        url
+      ], report)
+    });
     report({ phase: "正在整理文件", detail: "检查视频与声音…", percent: 94 });
   } catch (primaryError) {
+    if (["SIZE", "CONFIG"].includes(primaryError.code)) throw primaryError;
     if (hostMatches(hostname, douyinVideoHosts)) {
       try {
         await downloadViaDouyinChrome(url, quality, prefix, report);
         primaryError = null;
       } catch (fallbackError) {
-        throw new Error(`${primaryError.message} 真实浏览器兜底也未能完成：${fallbackError.message}`);
+        throw new Error(`${primaryError.message} 浏览器辅助下载也未完成：${fallbackError.message}`);
       }
     } else if (!hostMatches(hostname, cobaltVideoHosts)) {
       throw primaryError;
@@ -783,11 +748,12 @@ async function downloadVideo(body, report = () => {}) {
     }
   }
 
-  const files = (await readdir(downloadsDir)).filter((name) => name.startsWith(prefix) && !name.endsWith(".part"));
+  const files = (await readdir(downloadsDir)).filter((name) => name.startsWith(prefix) && /\.(?:mp4|webm|mkv|mov|gif)$/i.test(name));
   if (!files.length) throw new Error("下载已结束，但没有找到可保存的视频文件。");
   const filename = files[0];
   const filePath = join(downloadsDir, filename);
   const fileStat = await stat(filePath);
+  if (!fileStat.size) throw new Error("源站返回了空文件，本次下载未完成。");
   report({ phase: "正在准备保存", detail: formatProgressBytes(fileStat.size), percent: 97 });
   const token = randomUUID();
   const displayFilename = filename.slice(prefix.length);
